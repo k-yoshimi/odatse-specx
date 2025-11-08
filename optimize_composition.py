@@ -147,11 +147,11 @@ class HEAObjective:
         base_dim = self.info.base.get("dimension")
         if base_dim and base_dim != expected_dim:
             raise ValueError(
-                "base.dimension ({}) must equal {} ({}species{}).".format(
+                "base.dimension ({}) must equal {} (len(species)={}{}).".format(
                     base_dim,
                     expected_dim,
                     len(self.species),
-                    "-1 in simplex_mode" if self.simplex_mode else "",
+                    " - 1 for simplex_mode" if self.simplex_mode else "",
                 )
             )
 
