@@ -93,7 +93,7 @@ AkaiKKR計算をODAT-SEの探索アルゴリズムに接続して、ハイエン
 
 ## Appendix: hea.metricによる指標抽出
 
-`optimize_composition.py` では、AkaiKKR の出力ファイルから最小化すべき指標（エネルギーや伝導度など）をパースする `MetricExtractor` を実装しています（`optimize_composition.py:23-68`）。
+`optimize_composition.py` では、AkaiKKR の出力ファイルから最小化すべき指標（エネルギーや伝導度など）をパースする `MetricExtractor` を実装しています（`optimize_composition.py:60-93`）。
 
 1. `[hea.metric]` の `name` は、(a) ビルトインパターンを切り替える識別子、(b) ログやエラーメッセージで報告されるラベルの 2 つの意味を持ちます。`pattern` を省略した場合は、`name = "total_energy"` / `"band_energy"` に応じた既定の正規表現が選択され、抽出に成功すると `[Trial ...] ... -> total_energy=...` のように記録されます。
 2. 任意の指標を最小化したい場合は `pattern` に正規表現を指定してください。最初に一致したグループの数値を抽出し、`scale` でスカラー倍します（符号反転や単位換算に利用可能）。
