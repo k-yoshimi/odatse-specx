@@ -105,7 +105,7 @@ AkaiKKR計算をODAT-SEの探索アルゴリズムに接続して、ハイエン
 ```toml
 [hea.metric]
 name = "total_energy"      # 既定のパターンを使用
-# name = "band_energy"     # 帯磁場エネルギーを最小化する場合
+# name = "band_energy"     # バンドエネルギーを最小化する場合
 
 # AkaiKKR出力に「sigma = ...」があると仮定して伝導度を最小化する例
 # name = "conductivity"
