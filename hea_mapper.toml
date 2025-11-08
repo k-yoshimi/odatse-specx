@@ -1,7 +1,7 @@
 [base]
 dimension = 3  # simplex mode uses (num_species - 1) independent variables
 root_dir = "."
-output_dir = "odats/output"
+output_dir = "odatse/output"
 
 [algorithm]
 name = "mapper"
