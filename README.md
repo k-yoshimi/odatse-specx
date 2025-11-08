@@ -81,7 +81,7 @@ AkaiKKR計算をODAT-SEの探索アルゴリズムに接続して、ハイエン
 
 ## Appendix: simplex_modeアルゴリズム
 
-`simplex_mode` は ODAT-SE から渡される自由変数を「stick-breaking」変換することで、常に非負かつ総和 1 の濃度ベクトルへ写像します（`optimize_composition.py:206-228`）。
+`simplex_mode` は ODAT-SE から渡される自由変数を「stick-breaking」変換することで、常に非負かつ総和 1 の濃度ベクトルへ写像します（`optimize_composition.py:243-252`）。
 
 1. 入力次元: 混合する原子種数を `N` とすると、ODAT-SE 側には `N-1` 個の連続変数だけを探索してもらいます（`base.dimension = N-1`）。
 2. 変数のクリップ: 各パラメータを `[1e-6, 1-1e-6]` に収め、0 や 1 に張り付いた際の数値不安定を防ぎます。
