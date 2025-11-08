@@ -69,6 +69,98 @@ modified = replace_atom_types_by_label(
 write_input_file(modified, "output/test_modified.in")
 ```
 
+## ODAT-SEを利用した組成探索
+
+AkaiKKR計算をODAT-SEの探索アルゴリズムに接続して、ハイエントロピー合金 (HEA) の組成を探索するサンプルフローを `optimize_composition.py` / `hea_mapper.toml` に追加しました。
+
+1. `hea_mapper.toml` を編集し、`[[hea.species]]` へ混合したい原子種（原子番号）を列挙します。`akai_command` には AkaiKKR を起動するコマンド列を記述し、`{input}` もしくは `{input_path}` で各試行の入力ファイルを渡せます。
+2. 動作確認のみを行う場合は `mock_output = "refs/REBCO/test-1/test.out"` を残しておくと、`refs/REBCO/test-1/test.out:523` の `total energy= -59275.587686117` を読み取り、AkaiKKR を実行せずに一連の処理をトレースできます。
+3. 実計算時は `mock_output` 行を削除し、`output_file` に AkaiKKR が出力するファイル名 (例: `test.out`) を指定して `python optimize_composition.py hea_mapper.toml` を実行します。`target_label`（例: `Y_1h_2`）に対応するサイトへ新しい混合ラベルが適用され、得られた `total energy` が ODAT-SE の目的関数として最小化されます。
+4. HEA の各濃度を厳密に 1 へ正規化したい場合は `[hea] simplex_mode = true` を指定してください。この場合、ODAT-SE の `base.dimension` と `algorithm.param.*` は `len([[hea.species]]) - 1` の次元数に合わせます（例: 4 元合金なら 3 次元）。Stick-breaking パラメータ化によって常に非負・総和 1 の組成が生成されます。
+5. 最適化したい指標は `[hea.metric]` で選択できます。デフォルトは `total_energy` ですが、`name = "band_energy"` や `pattern = "sigma=..."` のようにカスタム正規表現を指定することで、伝導度など別の観測量にも拡張できます。
+
+## Appendix: simplex_modeアルゴリズム
+
+`simplex_mode` は ODAT-SE から渡される自由変数を「stick-breaking」変換することで、常に非負かつ総和 1 の濃度ベクトルへ写像します（`optimize_composition.py:206-228`）。
+
+1. 入力次元: 混合する原子種数を `N` とすると、ODAT-SE 側には `N-1` 個の連続変数だけを探索してもらいます（`base.dimension = N-1`）。
+2. 変数のクリップ: 各パラメータを `[1e-6, 1-1e-6]` に収め、0 や 1 に張り付いた際の数値不安定を防ぎます。
+3. Stick-breaking: 初期残量 `remainder = 1.0` を用意し、各パラメータ `x_i` に対して `portion_i = remainder * x_i` を割り当てていきます。割り当て後は `remainder -= portion_i` と更新します。
+4. 最後の成分: すべての stick を処理したあとに残った `remainder` を `N` 番目の濃度として追加することで、`Σ portion_i + remainder = 1` が常に保証されます。
+5. AkaiKKR 入力生成: 得られた濃度ベクトルを `generate_input.py` の `add_atom_type_definition()` / `replace_atom_types_by_label()` に渡し、AkaiKKR の `total energy` を目的関数として返します。
+
+この変換により、ODAT-SE は単なる直方体領域を探索するだけで、実際には単体（simplex）上の組成点を評価できるようになります。比例関係にある候補（例: `[0.1,...]` と `[0.2,...]`）が同一になることもありません。
+
+## Appendix: hea.metricによる指標抽出
+
+`optimize_composition.py` では、AkaiKKR の出力ファイルから最小化すべき指標（エネルギーや伝導度など）をパースする `MetricExtractor` を実装しています（`optimize_composition.py:23-68`）。
+
+1. `[hea.metric]` の `name` は、(a) ビルトインパターンを切り替える識別子、(b) ログやエラーメッセージで報告されるラベルの 2 つの意味を持ちます。`pattern` を省略した場合は、`name = "total_energy"` / `"band_energy"` に応じた既定の正規表現が選択され、抽出に成功すると `[Trial ...] ... -> total_energy=...` のように記録されます。
+2. 任意の指標を最小化したい場合は `pattern` に正規表現を指定してください。最初に一致したグループの数値を抽出し、`scale` でスカラー倍します（符号反転や単位換算に利用可能）。
+3. `ignore_case`（デフォルト: true）を false にすると大文字・小文字を区別した検索になります。`group` で抽出したいキャプチャ番号を指定できます。
+4. 抽出結果は `HEAObjective` の `metric.extract()` を通じて取得され、ODAT-SE の目的関数値として返されます。該当行が見つからない場合はエラーになり、設定見直しを促します。
+
+### TOML例（hea.metric）
+
+```toml
+[hea.metric]
+name = "total_energy"      # 既定のパターンを使用
+# name = "band_energy"     # 帯磁場エネルギーを最小化する場合
+
+# AkaiKKR出力に「sigma = ...」があると仮定して伝導度を最小化する例
+# name = "conductivity"
+# pattern = "sigma=\\s*([-.0-9Ee]+)"
+# scale = 1.0              # 単位換算が必要なら適宜変更
+# ignore_case = true
+# group = 1
+```
+
+### TOMLでの設定例
+
+```toml
+[base]
+dimension = 3  # 4 元合金を探索する場合（= species 数 - 1）
+
+[algorithm]
+name = "mapper"
+
+[algorithm.param]
+min_list = [0.0, 0.0, 0.0]
+max_list = [1.0, 1.0, 1.0]
+num_list = [5, 5, 5]
+
+[solver]
+name = "function"
+
+[hea]
+template_input = "refs/REBCO/test-1/test.in"
+target_label = "Y_1h_2"
+new_label = "Ln_HEA"
+simplex_mode = true  # ← これを有効にすると stick-breaking 変換を使用
+
+[hea.metric]
+name = "total_energy"  # band_energy / custom pattern
+# pattern = "sigma=\\s*([-.0-9Ee]+)"  # 指標がファイル中で別表記の場合は上書き可能
+
+[[hea.species]]
+label = "Y"
+atomic_number = 39
+
+[[hea.species]]
+label = "La"
+atomic_number = 57
+
+[[hea.species]]
+label = "Nd"
+atomic_number = 60
+
+[[hea.species]]
+label = "Sm"
+atomic_number = 62
+```
+
+`simplex_mode = true` を設定すると、ODAT-SE 側で探索する次元は `base.dimension = len([[hea.species]]) - 1` に合わせる必要があります。`algorithm.param` の `min_list` / `max_list` / `num_list` も同じ長さになるよう注意してください。また `[hea.metric]` ブロックでは最小化対象を切り替えられ、`name = "total_energy"` / `"band_energy"` のような既定値に加えて、`pattern = "sigma=\\s*([-.0-9Ee]+)"` のように正規表現を指定することで伝導度など任意のスカラーを抽出できます。
+
 ## 詳細ドキュメント
 
 - **`generate_input.py`の詳細**: [README_generate_input.md](README_generate_input.md)
@@ -91,4 +183,3 @@ MIT License
 ## 参考資料
 
 - [AkaiKKR公式ドキュメント](https://academeia.github.io/AkaiKKR_Documents/input)
-
