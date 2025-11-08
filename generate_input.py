@@ -620,8 +620,8 @@ def list_atomic_positions(input_data: Union[Dict, str, Path]) -> None:
 
 if __name__ == "__main__":
     # 使用例: 新しい原子種を定義して、ラベル指定での一括置換を行う
-    input_file = "refs/REBCO/test-4/test.in"
-    output_file = "refs/REBCO/test-4/test_modified.in"
+    input_file = "refs/REBCO/test-1/test.in"
+    output_file = "refs/REBCO/test-1/test_modified.in"
 
     # 入力ファイルを読み込む
     input_data = load_input_file(input_file)
@@ -653,7 +653,7 @@ if __name__ == "__main__":
     print()
 
     # 別の例: 新しい混合原子種を定義して、複数のラベルを一括置換
-    output_file_2 = "refs/REBCO/test-10/test_modified_2.in"
+    output_file_2 = "refs/REBCO/test-1-out/test_modified_2.in"
     # 新しい混合原子種（Y 50%, La 50%）を追加
     new_data_with_mixed = add_atom_type_definition(
         input_data,
