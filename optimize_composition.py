@@ -122,6 +122,13 @@ class HEAObjective:
         self.trial_counter = 0
         self.metric = MetricExtractor(config.get("metric", {}))
 
+        # Error handling configuration
+        self.error_penalty = float(config.get("error_penalty", 1.0e10))
+        self.error_log_file = config.get("error_log")
+        if self.error_log_file:
+            self.error_log_file = (self.root_dir / self.error_log_file).absolute()
+            self.error_log_file.parent.mkdir(parents=True, exist_ok=True)
+
         self.base_input_data = load_input_file(self.template_input)
         self.reference_type = self._get_reference_type()
         self.mix_rmt = float(config.get("rmt", self.reference_type["rmt"]))
@@ -156,27 +163,83 @@ class HEAObjective:
             )
 
     def __call__(self, params: np.ndarray) -> float:
+        """
+        Evaluate a candidate composition and return the objective value.
+
+        Parameters
+        ----------
+        params : np.ndarray
+            ODAT-SE parameters (converted to fractions).
+
+        Returns
+        -------
+        float
+            Objective value (total energy or error penalty).
+        """
         fractions = self._to_fractions(params)
         trial_dir = self._prepare_trial_dir()
         input_path = trial_dir / self.template_input.name
-        modified = self._build_input_data(fractions)
-        write_input_file(modified, input_path)
-
         output_path = trial_dir / self.output_filename
-        if self.mock_output:
-            shutil.copy(self.mock_output, output_path)
-        else:
-            self._run_akai_kkr(input_path, trial_dir)
 
-        energy = self.metric.extract(output_path)
-        print(
-            f"[Trial {self.trial_counter:05d}] fractions={fractions} -> {self.metric.name}={energy}"
-        )
+        try:
+            modified = self._build_input_data(fractions)
+            write_input_file(modified, input_path)
 
-        if not self.keep_intermediate:
-            shutil.rmtree(trial_dir, ignore_errors=True)
+            if self.mock_output:
+                shutil.copy(self.mock_output, output_path)
+            else:
+                self._run_akai_kkr(input_path, trial_dir)
 
-        return energy
+            energy = self.metric.extract(output_path)
+            print(
+                f"[Trial {self.trial_counter:05d}] fractions={fractions} -> {self.metric.name}={energy}"
+            )
+
+            if not self.keep_intermediate:
+                shutil.rmtree(trial_dir, ignore_errors=True)
+
+            return energy
+
+        except (FileNotFoundError, RuntimeError, ValueError) as exc:
+            error_msg = (
+                f"[Trial {self.trial_counter:05d}] ERROR: fractions={fractions} -> "
+                f"{type(exc).__name__}: {exc}"
+            )
+            print(error_msg)
+
+            if self.error_log_file:
+                with self.error_log_file.open("a", encoding="utf-8") as f:
+                    f.write(f"{error_msg}\n")
+                    f.write(f"  Input file: {input_path}\n")
+                    f.write(f"  Output file: {output_path}\n")
+                    f.write(f"  Trial directory: {trial_dir}\n")
+                    f.write("\n")
+
+            # Keep intermediate files on error if configured
+            if not self.keep_intermediate:
+                shutil.rmtree(trial_dir, ignore_errors=True)
+
+            return self.error_penalty
+
+        except Exception as exc:
+            error_msg = (
+                f"[Trial {self.trial_counter:05d}] UNEXPECTED ERROR: "
+                f"fractions={fractions} -> {type(exc).__name__}: {exc}"
+            )
+            print(error_msg)
+
+            if self.error_log_file:
+                with self.error_log_file.open("a", encoding="utf-8") as f:
+                    f.write(f"{error_msg}\n")
+                    f.write(f"  Input file: {input_path}\n")
+                    f.write(f"  Output file: {output_path}\n")
+                    f.write(f"  Trial directory: {trial_dir}\n")
+                    f.write("\n")
+
+            if not self.keep_intermediate:
+                shutil.rmtree(trial_dir, ignore_errors=True)
+
+            return self.error_penalty
 
     def _prepare_trial_dir(self) -> Path:
         self.trial_counter += 1

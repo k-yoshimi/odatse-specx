@@ -100,6 +100,25 @@ AkaiKKR計算をODAT-SEの探索アルゴリズムに接続して、ハイエン
 3. `ignore_case`（デフォルト: true）を false にすると大文字・小文字を区別した検索になります。`group` で抽出したいキャプチャ番号を指定できます。
 4. 抽出結果は `HEAObjective` の `metric.extract()` を通じて取得され、ODAT-SE の目的関数値として返されます。該当行が見つからない場合はエラーになり、設定見直しを促します。
 
+## Appendix: エラーハンドリング
+
+`optimize_composition.py` では、AkaiKKR の計算が失敗した場合や数値が取得できなかった場合に、適切なエラーハンドリングを行います（`optimize_composition.py:165-242`）。
+
+1. **エラー時のペナルティ値**: 計算が失敗した場合、デフォルトで `1.0e10` という大きなペナルティ値を返します。これにより、最適化アルゴリズムは失敗した組成点を避けるようになります。`[hea]` セクションで `error_penalty` を指定することで、この値をカスタマイズできます。
+
+2. **エラーログ**: `[hea]` セクションで `error_log` にファイルパスを指定すると、エラーが発生した試行の詳細情報が記録されます。ログには以下が含まれます：
+   - エラーの種類とメッセージ
+   - 試行番号と組成パラメータ
+   - 入力ファイル、出力ファイル、試行ディレクトリのパス
+
+3. **中間ファイルの保持**: エラーが発生した場合でも、`keep_intermediate = true` が設定されている場合は、失敗した試行のファイルが保持されます。これにより、後でエラーの原因を調査できます。
+
+4. **エラーの種類**: 以下のエラーが捕捉され、ペナルティ値が返されます：
+   - `FileNotFoundError`: 出力ファイルが生成されなかった場合
+   - `RuntimeError`: AkaiKKR の実行が失敗した場合、または指標が見つからなかった場合
+   - `ValueError`: 設定やデータの形式に問題がある場合
+   - その他の予期しないエラー
+
 ### TOML例（hea.metric）
 
 ```toml
@@ -137,6 +156,8 @@ template_input = "refs/REBCO/test-1/test.in"
 target_label = "Y_1h_2"
 new_label = "Ln_HEA"
 simplex_mode = true  # ← これを有効にすると stick-breaking 変換を使用
+error_penalty = 1.0e10  # 計算失敗時のペナルティ値（オプション、デフォルト: 1.0e10）
+error_log = "runs/error_log.txt"  # エラーログファイル（オプション）
 
 [hea.metric]
 name = "total_energy"  # band_energy / custom pattern
