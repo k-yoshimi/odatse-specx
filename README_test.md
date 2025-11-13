@@ -4,21 +4,40 @@
 
 ## テストの実行方法
 
-### 基本的な実行
+### すべてのテストを一括実行（推奨）
 
 ```bash
-python3 test_generate_input.py
+# pytestを使用（推奨）
+python -m pytest test_*.py -v
+
+# または、カレントディレクトリのすべてのテストを実行
+python -m pytest -v
+
+# より詳細な出力
+python -m pytest test_*.py -vv
 ```
 
-### 詳細な出力で実行
+### unittestを使用
 
 ```bash
+# すべてのテストファイルを一括実行
+python -m unittest discover -v
+
+# または、特定のパターンでテストを検索
+python -m unittest discover -p "test_*.py" -v
+```
+
+### 個別のテストファイルを実行
+
+```bash
+# test_generate_input.pyのみ
+python -m pytest test_generate_input.py -v
+
+# test_optimize_composition.pyのみ
+python -m pytest test_optimize_composition.py -v
+
+# または、unittestを使用
 python3 test_generate_input.py -v
-```
-
-または
-
-```bash
 python3 -m unittest test_generate_input.py -v
 ```
 
@@ -101,7 +120,7 @@ python3 -m unittest test_generate_input.py -v
 
 テストは以下のファイルを前提としています：
 
-- `refs/REBCO/test-4/test.in`: テスト用の入力ファイル
+- `refs/REBCO/test-1/test.in`: テスト用の入力ファイル
 
 このファイルが存在しない場合、テストは失敗します。
 
