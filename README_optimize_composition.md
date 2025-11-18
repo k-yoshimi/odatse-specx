@@ -239,7 +239,7 @@ Basic 4-element alloy composition exploration:
     new_label = "Ln_HEA"
     work_dir = "runs/hea_trials"
     output_file = "test.out"
-    akai_command = ["akaiKKR", "{input}"]
+    akai_command = ["akaiKKR", "<", "{input}", ">", "{output}"]
     keep_intermediate = false
     simplex_mode = true
     error_penalty = 1.0e10
