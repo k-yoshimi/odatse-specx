@@ -26,14 +26,16 @@ target_label = "Y_1h_2"
 new_label = "Ln_HEA"
 work_dir = "runs/hea_trials"
 output_file = "test.out"
-# AkaiKKR command with stdin redirection
-# {input} will be replaced with the input filename (e.g., "test.in")
-# {input_path} can be used for full path (e.g., "/full/path/to/test.in")
+# AkaiKKR command with stdin/stdout redirection
+# Placeholders:
+#   {input} - input filename (e.g., "test.in")
+#   {input_path} - full path to input file
+#   {output} - output filename (e.g., "test.out", from output_file setting)
 # Examples:
-#   ["specx", "<", "{input}"]        -> specx < test.in
-#   ["specx", "{input}"]             -> specx test.in (as command argument)
-#   ["specx", "{input_path}"]       -> specx /full/path/to/test.in
-akai_command = ["/home/k-yoshimi/program/cpa2021/specx", "<", "{input}"]
+#   ["specx", "<", "{input}", ">", "{output}"]  -> specx < test.in > test.out (recommended)
+#   ["specx", "<", "{input}"]                    -> specx < test.in
+#   ["specx", "{input}"]                         -> specx test.in
+akai_command = ["/home/k-yoshimi/program/cpa2021/specx", "<", "{input}", ">", "{output}"]
 keep_intermediate = true  # Set to true for debugging
 #mock_output = "refs/REBCO/test-1/test.out"  # remove this line when running real calculations
 simplex_mode = true  # enforce fractions that sum exactly to 1.0

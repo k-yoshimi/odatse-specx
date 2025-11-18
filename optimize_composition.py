@@ -43,8 +43,8 @@ from generate_input import (
 )
 
 DEFAULT_METRIC_PATTERNS = {
-    "total_energy": r"total energy=\s*([-\d.+Ee]+)",
-    "band_energy": r"band energy=\s*([-\d.+Ee]+)",
+    "total_energy": r"total energy=?\s+([-\d.+Ee]+)",
+    "band_energy": r"band energy=?\s+([-\d.+Ee]+)",
 }
 
 
@@ -111,11 +111,14 @@ class HEAObjective:
         self.output_filename = config.get("output_file", "test.out")
         self.keep_intermediate = bool(config.get("keep_intermediate", False))
         # akai_command examples:
-        #   ["specx", "<", "{input}"]           -> specx < test.in (stdin redirection)
-        #   ["specx", "{input}"]                -> specx test.in (command argument)
-        #   ["specx", "{input_path}"]           -> specx /full/path/to/test.in
-        #   ["/path/to/specx", "<", "test.in"]  -> /path/to/specx < test.in
-        # Placeholders: {input} = filename only, {input_path} = full path
+        #   ["specx", "<", "{input}", ">", "{output}"]  -> specx < test.in > test.out
+        #   ["specx", "<", "{input}"]                    -> specx < test.in (stdin redirection)
+        #   ["specx", "{input}"]                         -> specx test.in (command argument)
+        #   ["specx", "{input_path}"]                    -> specx /full/path/to/test.in
+        # Placeholders:
+        #   {input} = filename only (e.g., "test.in")
+        #   {input_path} = full path (e.g., "/full/path/to/test.in")
+        #   {output} = output filename (e.g., "test.out")
         self.command_template = _as_command_list(config.get("akai_command", []))
         if not self.command_template:
             raise ValueError("akai_command must be provided inside [hea].")
@@ -282,12 +285,14 @@ class HEAObjective:
         """
         Execute AkaiKKR command with input file handling.
         
-        Supports stdin redirection (<) and placeholder substitution:
+        Supports stdin/stdout redirection (<, >) and placeholder substitution:
         - {input} -> input_path.name (e.g., "test.in")
         - {input_path} -> str(input_path) (e.g., "/full/path/to/test.in")
+        - {output} -> output_filename (e.g., "test.out")
         """
         cmd = []
         stdin_file = None
+        stdout_file = None
         skip_next = False
         
         for i, token in enumerate(self.command_template):
@@ -295,10 +300,10 @@ class HEAObjective:
                 skip_next = False
                 continue
             
-            # Replace placeholders: {input} = filename, {input_path} = full path
+            # Replace placeholders: {input} = filename, {input_path} = full path, {output} = output filename
             replaced = token.replace("{input}", input_path.name).replace(
                 "{input_path}", str(input_path)
-            )
+            ).replace("{output}", self.output_filename)
             
             if replaced == "<":
                 # Handle stdin redirection: < filename
@@ -313,6 +318,19 @@ class HEAObjective:
                 else:
                     # If < is at the end, use input_path directly
                     stdin_file = input_path.open("r")
+            elif replaced == ">":
+                # Handle stdout redirection: > filename
+                # Next token should be the output file (may contain {output})
+                if i + 1 < len(self.command_template):
+                    next_token = self.command_template[i + 1].replace(
+                        "{output}", self.output_filename
+                    )
+                    # Open file relative to trial_dir for writing
+                    stdout_file = (trial_dir / next_token).open("w")
+                    skip_next = True
+                else:
+                    # If > is at the end, use output_filename
+                    stdout_file = (trial_dir / self.output_filename).open("w")
             else:
                 # Regular command argument
                 cmd.append(replaced)
@@ -325,12 +343,15 @@ class HEAObjective:
                 env=self.command_env,
                 timeout=self.command_timeout,
                 stdin=stdin_file,
+                stdout=stdout_file,
             )
         except subprocess.CalledProcessError as exc:
             raise RuntimeError(f"AkaiKKR failed for {input_path}") from exc
         finally:
             if stdin_file is not None:
                 stdin_file.close()
+            if stdout_file is not None:
+                stdout_file.close()
 
     def _to_fractions(self, params: np.ndarray) -> np.ndarray:
         if self.simplex_mode:

@@ -71,8 +71,17 @@ write_input_file(modified, "output/test_modified.in")
 
 AkaiKKR計算をODAT-SEの探索アルゴリズムに接続して、ハイエントロピー合金 (HEA) の組成を探索するサンプルフローを `optimize_composition.py` / `hea_mapper.toml` に追加しました。
 
-1. `hea_mapper.toml` を編集し、`[[hea.species]]` へ混合したい原子種（原子番号）を列挙します。`akai_command` には AkaiKKR を起動するコマンド列を記述し、`{input}` もしくは `{input_path}` で各試行の入力ファイルを渡せます。
-2. 動作確認のみを行う場合は `mock_output = "refs/REBCO/test-1/test.out"` を残しておくと、`refs/REBCO/test-1/test.out:523` の `total energy= -59275.587686117` を読み取り、AkaiKKR を実行せずに一連の処理をトレースできます。
+1. `hea_mapper.toml` を編集し、`[[hea.species]]` へ混合したい原子種（原子番号）を列挙します。`akai_command` には AkaiKKR を起動するコマンド列を記述します。使用可能なプレースホルダー:
+   - `{input}`: 入力ファイル名（例: `"test.in"`）
+   - `{input_path}`: 入力ファイルのフルパス
+   - `{output}`: 出力ファイル名（`output_file` 設定で指定、デフォルト: `"test.out"`）
+   
+   標準入力・標準出力のリダイレクトもサポートされています。推奨設定:
+   ```toml
+   akai_command = ["specx", "<", "{input}", ">", "{output}"]
+   ```
+   これは `specx < test.in > test.out` と同等です。`{output}` を省略した場合、標準出力はファイルに保存されません。
+2. 動作確認のみを行う場合は `mock_output = "refs/REBCO/test-1/test.out"` を残しておくと、`refs/REBCO/test-1/test.out:523` の `total energy= -59275.587686117` を読み取り、AkaiKKR を実行せずに一連の処理をトレースできます。実際の計算では、`total energy=` と `total energy`（`=`なし）の両方の形式に対応しています。
 3. 実計算時は `mock_output` 行を削除し、`output_file` に AkaiKKR が出力するファイル名 (例: `test.out`) を指定して `python optimize_composition.py hea_mapper.toml` を実行します。`target_label`（例: `Y_1h_2`）に対応するサイトへ新しい混合ラベルが適用され、得られた `total energy` が ODAT-SE の目的関数として最小化されます。
 4. HEA の各濃度を厳密に 1 へ正規化したい場合は `[hea] simplex_mode = true` を指定してください。この場合、ODAT-SE の `base.dimension` と `algorithm.param.*` は `len([[hea.species]]) - 1` の次元数に合わせます（例: 4 元合金なら 3 次元）。Stick-breaking パラメータ化によって常に非負・総和 1 の組成が生成されます。
 5. 最適化したい指標は `[hea.metric]` で選択できます。デフォルトは `total_energy` ですが、`name = "band_energy"` や `pattern = "sigma=..."` のようにカスタム正規表現を指定することで、伝導度など別の観測量にも拡張できます。
@@ -95,7 +104,7 @@ AkaiKKR計算をODAT-SEの探索アルゴリズムに接続して、ハイエン
 
 `optimize_composition.py` では、AkaiKKR の出力ファイルから最小化すべき指標（エネルギーや伝導度など）をパースする `MetricExtractor` を実装しています（`optimize_composition.py:60-93`）。
 
-1. `[hea.metric]` の `name` は、(a) ビルトインパターンを切り替える識別子、(b) ログやエラーメッセージで報告されるラベルの 2 つの意味を持ちます。`pattern` を省略した場合は、`name = "total_energy"` / `"band_energy"` に応じた既定の正規表現が選択され、抽出に成功すると `[Trial ...] ... -> total_energy=...` のように記録されます。
+1. `[hea.metric]` の `name` は、(a) ビルトインパターンを切り替える識別子、(b) ログやエラーメッセージで報告されるラベルの 2 つの意味を持ちます。`pattern` を省略した場合は、`name = "total_energy"` / `"band_energy"` に応じた既定の正規表現が選択され、抽出に成功すると `[Trial ...] ... -> total_energy=...` のように記録されます。既定の `total_energy` パターンは `total energy=` と `total energy`（`=`なし）の両方の形式に対応しています（例: `total energy= -59275.587686117` や `total energy        -64162.390074716`）。
 2. 任意の指標を最小化したい場合は `pattern` に正規表現を指定してください。最初に一致したグループの数値を抽出し、`scale` でスカラー倍します（符号反転や単位換算に利用可能）。
 3. `ignore_case`（デフォルト: true）を false にすると大文字・小文字を区別した検索になります。`group` で抽出したいキャプチャ番号を指定できます。
 4. 抽出結果は `HEAObjective` の `metric.extract()` を通じて取得され、ODAT-SE の目的関数値として返されます。該当行が見つからない場合はエラーになり、設定見直しを促します。
@@ -130,6 +139,13 @@ name = "total_energy"      # 既定のパターンを使用
 # name = "conductivity"
 # pattern = "sigma=\\s*([-.0-9Ee]+)"
 # scale = 1.0              # 単位換算が必要なら適宜変更
+# ignore_case = true
+# group = 1
+
+# spin momentを最小化する例
+# name = "spin_moment"
+# pattern = "spin moment= ?\\s+([-\\d.+Ee]+)"
+# scale = 1.0
 # ignore_case = true
 # group = 1
 ```
