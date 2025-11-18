@@ -1,0 +1,58 @@
+# Example: 5-element alloy with simplex_mode
+# dimension = 4 (5 species - 1)
+
+[base]
+dimension = 4  # 5-element alloy: dimension = number of species - 1
+root_dir = "."
+output_dir = "odatse/output"
+
+[algorithm]
+name = "mapper"
+seed = 20240502
+
+[algorithm.param]
+min_list = [0.0, 0.0, 0.0, 0.0]  # Must match dimension
+max_list = [1.0, 1.0, 1.0, 1.0]
+num_list = [5, 5, 5, 5]
+
+[solver]
+name = "function"
+
+[runner]
+[runner.log]
+interval = 10
+
+[hea]
+template_input = "template.in"  # Template file in this directory
+target_label = "Y_1h_2"
+new_label = "Ln_HEA"
+work_dir = "runs/hea_trials"
+output_file = "test.out"
+akai_command = ["specx", "<", "{input}", ">", "{output}"]
+keep_intermediate = false
+simplex_mode = true
+error_penalty = 1.0e10
+
+[hea.metric]
+name = "total_energy"
+
+[[hea.species]]
+label = "Y"
+atomic_number = 39
+
+[[hea.species]]
+label = "La"
+atomic_number = 57
+
+[[hea.species]]
+label = "Nd"
+atomic_number = 60
+
+[[hea.species]]
+label = "Sm"
+atomic_number = 62
+
+[[hea.species]]
+label = "Gd"
+atomic_number = 64
+

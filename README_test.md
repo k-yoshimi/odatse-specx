@@ -1,6 +1,6 @@
 # Test Suite Documentation
 
-`test_generate_input.py` is a comprehensive test suite for testing the functionality of the `generate_input.py` module.
+`test/test_generate_input.py` is a comprehensive test suite for testing the functionality of the `generate_input.py` module.
 
 ## How to Run Tests
 
@@ -8,37 +8,37 @@
 
 ```bash
 # Using pytest (recommended)
-python -m pytest test_*.py -v
+python -m pytest test/test_*.py -v
 
-# Or run all tests in the current directory
-python -m pytest -v
+# Or run all tests in the test directory
+python -m pytest test/ -v
 
 # More detailed output
-python -m pytest test_*.py -vv
+python -m pytest test/test_*.py -vv
 ```
 
 ### Using unittest
 
 ```bash
 # Run all test files at once
-python -m unittest discover -v
+python -m unittest discover -s test -v
 
 # Or search for tests with a specific pattern
-python -m unittest discover -p "test_*.py" -v
+python -m unittest discover -s test -p "test_*.py" -v
 ```
 
 ### Run Individual Test Files
 
 ```bash
 # test_generate_input.py only
-python -m pytest test_generate_input.py -v
+python -m pytest test/test_generate_input.py -v
 
 # test_optimize_composition.py only
-python -m pytest test_optimize_composition.py -v
+python -m pytest test/test_optimize_composition.py -v
 
-# Or using unittest
-python3 test_generate_input.py -v
-python3 -m unittest test_generate_input.py -v
+# Or using unittest (from project root)
+python3 test/test_generate_input.py -v
+python3 -m unittest test.test_generate_input -v
 ```
 
 ## Test Structure
@@ -120,7 +120,7 @@ The test suite covers the following functionality:
 
 Tests assume the following file exists:
 
-- `refs/odatse-specx/test-1/test.in`: Input file for testing
+- `test/refs/test.in`: Input file for testing
 
 If this file does not exist, tests will fail.
 

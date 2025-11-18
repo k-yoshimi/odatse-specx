@@ -15,7 +15,7 @@ Usage
 
 See ``hea_mapper.toml`` for a minimal configuration that sweeps the rare-earth
 composition on the ``Y_1h_2`` site and parses the ``total energy`` field from
-``refs/odatse-specx/test-1/test.out``.
+``test/refs/test.out``.
 """
 
 from __future__ import annotations

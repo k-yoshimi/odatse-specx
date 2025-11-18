@@ -21,7 +21,7 @@ name = "function"
 interval = 10
 
 [hea]
-template_input = "refs/odatse-specx/test-1/test.in"
+template_input = "test/refs/test.in"
 target_label = "Y_1h_2"
 new_label = "Ln_HEA"
 work_dir = "runs/hea_trials"
@@ -37,7 +37,7 @@ output_file = "test.out"
 #   ["specx", "{input}"]                         -> specx test.in
 akai_command = ["/home/k-yoshimi/program/cpa2021/specx", "<", "{input}", ">", "{output}"]
 keep_intermediate = true  # Set to true for debugging
-#mock_output = "refs/odatse-specx/test-1/test.out"  # remove this line when running real calculations
+#mock_output = "test/refs/test.out"  # remove this line when running real calculations
 simplex_mode = true  # enforce fractions that sum exactly to 1.0
 
 [hea.metric]

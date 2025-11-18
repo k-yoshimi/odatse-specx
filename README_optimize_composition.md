@@ -234,7 +234,7 @@ Basic 4-element alloy composition exploration:
     interval = 10
 
     [hea]
-    template_input = "refs/odatse-specx/test-1/test.in"
+    template_input = "test/refs/test.in"
     target_label = "Y_1h_2"
     new_label = "Ln_HEA"
     work_dir = "runs/hea_trials"
@@ -282,7 +282,7 @@ Example of executing AkaiKKR with environment variables set:
 
 Example of testing without running AkaiKKR using mock output:
 
-    python optimize_composition.py hea_mapper.toml --mock-output refs/odatse-specx/test-1/test.out
+    python optimize_composition.py hea_mapper.toml --mock-output test/refs/test.out
 
 NOTES
 

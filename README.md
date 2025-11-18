@@ -81,7 +81,7 @@ A sample workflow for exploring high-entropy alloy (HEA) compositions by connect
    akai_command = ["specx", "<", "{input}", ">", "{output}"]
    ```
    This is equivalent to `specx < test.in > test.out`. If `{output}` is omitted, standard output is not saved to a file.
-2. For testing only, keep `mock_output = "refs/odatse-specx/test-1/test.out"` to read `total energy= -59275.587686117` from `refs/odatse-specx/test-1/test.out:523` and trace the entire process without running AkaiKKR. For actual calculations, both `total energy=` and `total energy` (without `=`) formats are supported.
+2. For testing only, keep `mock_output = "test/refs/test.out"` to read `total energy= -59275.587686117` from `test/refs/test.out:523` and trace the entire process without running AkaiKKR. For actual calculations, both `total energy=` and `total energy` (without `=`) formats are supported.
 3. For actual calculations, remove the `mock_output` line, specify the filename that AkaiKKR outputs (e.g., `test.out`) in `output_file`, and run `python optimize_composition.py hea_mapper.toml`. A new mixed label is applied to the site corresponding to `target_label` (e.g., `Y_1h_2`), and the obtained `total energy` is minimized as ODAT-SE's objective function.
 4. To strictly normalize each HEA concentration to 1, specify `[hea] simplex_mode = true`. In this case, ODAT-SE's `base.dimension` and `algorithm.param.*` should match the dimension count of `len([[hea.species]]) - 1` (e.g., 3 dimensions for a 4-element alloy). The stick-breaking parameterization always generates compositions that are non-negative and sum to 1.
 5. The metric to optimize can be selected in `[hea.metric]`. The default is `total_energy`, but you can extend to other observables such as conductivity by specifying custom regular expressions like `name = "band_energy"` or `pattern = "sigma=..."`. You can also apply metric transformations to the extracted value using `transform` (e.g., `log1p` or `abs`).
@@ -178,7 +178,7 @@ num_list = [5, 5, 5]
 name = "function"
 
 [hea]
-template_input = "refs/odatse-specx/test-1/test.in"
+template_input = "test/refs/test.in"
 target_label = "Y_1h_2"
 new_label = "Ln_HEA"
 simplex_mode = true  # ← Enable this to use stick-breaking transformation

@@ -11,9 +11,14 @@ Test targets:
 - Integration tests
 """
 
+import sys
+from pathlib import Path
+
+# Add parent directory to path to import modules
+sys.path.insert(0, str(Path(__file__).parent.parent))
+
 import tempfile
 import unittest
-from pathlib import Path
 
 from generate_input import (
     add_atom_type_definition,
@@ -30,7 +35,7 @@ class TestLoadInputFile(unittest.TestCase):
 
     def setUp(self):
         """Test setup"""
-        self.test_input_file = "refs/odatse-specx/test-1/test.in"
+        self.test_input_file = "test/refs/test.in"
         self.sample_input_data = load_input_file(self.test_input_file)
 
     def test_load_input_file_basic(self):
@@ -87,7 +92,7 @@ class TestReplaceAtomTypes(unittest.TestCase):
 
     def setUp(self):
         """Test setup"""
-        self.test_input_file = "refs/odatse-specx/test-1/test.in"
+        self.test_input_file = "test/refs/test.in"
         self.sample_input_data = load_input_file(self.test_input_file)
 
     def test_replace_atom_types_basic(self):
@@ -128,7 +133,7 @@ class TestReplaceAtomTypesByCoordinates(unittest.TestCase):
 
     def setUp(self):
         """Test setup"""
-        self.test_input_file = "refs/odatse-specx/test-1/test.in"
+        self.test_input_file = "test/refs/test.in"
         self.sample_input_data = load_input_file(self.test_input_file)
 
     def test_replace_atom_types_by_coordinates_basic(self):
@@ -175,7 +180,7 @@ class TestReplaceAtomTypesByLabel(unittest.TestCase):
 
     def setUp(self):
         """Test setup"""
-        self.test_input_file = "refs/odatse-specx/test-1/test.in"
+        self.test_input_file = "test/refs/test.in"
         self.sample_input_data = load_input_file(self.test_input_file)
 
     def test_replace_atom_types_by_label_basic(self):
@@ -267,7 +272,7 @@ class TestAddAtomTypeDefinition(unittest.TestCase):
 
     def setUp(self):
         """Test setup"""
-        self.test_input_file = "refs/odatse-specx/test-1/test.in"
+        self.test_input_file = "test/refs/test.in"
         self.sample_input_data = load_input_file(self.test_input_file)
 
     def test_add_atom_type_definition_basic(self):
@@ -351,7 +356,7 @@ class TestWriteInputFile(unittest.TestCase):
 
     def setUp(self):
         """Test setup"""
-        self.test_input_file = "refs/odatse-specx/test-1/test.in"
+        self.test_input_file = "test/refs/test.in"
         self.sample_input_data = load_input_file(self.test_input_file)
 
     def test_write_input_file_basic(self):
@@ -459,7 +464,7 @@ class TestIntegration(unittest.TestCase):
 
     def setUp(self):
         """Test setup"""
-        self.test_input_file = "refs/odatse-specx/test-1/test.in"
+        self.test_input_file = "test/refs/test.in"
         self.sample_input_data = load_input_file(self.test_input_file)
 
     def test_full_workflow(self):

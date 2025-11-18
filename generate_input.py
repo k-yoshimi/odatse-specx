@@ -629,8 +629,8 @@ def list_atomic_positions(input_data: Union[Dict, str, Path]) -> None:
 
 if __name__ == "__main__":
     # Usage example: Define new atom species and perform batch replacement by label
-    input_file = "refs/odatse-specx/test-1/test.in"
-    output_file = "refs/odatse-specx/test-1/test_modified.in"
+    input_file = "test/refs/test.in"
+    output_file = "test/refs/test_modified.in"
 
     # Load input file
     input_data = load_input_file(input_file)
@@ -662,7 +662,7 @@ if __name__ == "__main__":
     print()
 
     # Another example: Define new mixed atom species and replace multiple labels
-    output_file_2 = "refs/odatse-specx/test-1-out/test_modified_2.in"
+    output_file_2 = "test/refs/test_modified_2.in"
     # Add new mixed atom species (Y 50%, La 50%)
     new_data_with_mixed = add_atom_type_definition(
         input_data,
