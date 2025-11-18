@@ -1,0 +1,8 @@
+include README.md
+include README_*.md
+include LICENSE
+include pytest.ini
+include hea_mapper.toml
+recursive-include examples *.toml *.in *.md
+recursive-include test *.py *.in *.out *.dat *.dat.info
+

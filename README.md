@@ -16,6 +16,42 @@ This project provides tools to read AkaiKKR (first-principles calculation code) 
 - **New atom species definition**: Define and add single or mixed atom species
 - **Input file export**: Write structured data in AkaiKKR input file format
 
+## Installation
+
+### Requirements
+
+- Python 3.10 or higher
+- numpy>=1.20.0
+- odat-se
+
+### Install from source
+
+Clone the repository and install in development mode:
+
+```bash
+git clone <repository-url>
+cd odatse-specx
+pip install -e .
+```
+
+Or install normally:
+
+```bash
+pip install .
+```
+
+### Install with development dependencies
+
+To include development dependencies (pytest, etc.):
+
+```bash
+pip install -e ".[dev]"
+```
+
+After installation, you can:
+- Import modules: `from generate_input import ...`
+- Use the command-line tool: `optimize-composition <config.toml>`
+
 ## File Structure
 
 ```
@@ -218,7 +254,11 @@ When `simplex_mode = true` is set, the dimension to explore on the ODAT-SE side 
 To run the test suite:
 
 ```bash
-python3 test_generate_input.py
+# Using pytest (recommended)
+python -m pytest test/ -v
+
+# Or using unittest
+python -m unittest discover -s test -v
 ```
 
 For details, see [README_test.md](README_test.md).
