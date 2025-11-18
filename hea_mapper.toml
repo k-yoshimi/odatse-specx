@@ -11,7 +11,7 @@ colormap = "colormap_HEA.txt"
 [algorithm.param]
 min_list = [0.0, 0.0, 0.0]  # lower bounds for simplex variables
 max_list = [1.0, 1.0, 1.0]  # upper bounds
-num_list = [3, 3, 3]        # mesh points per axis
+num_list = [1, 1, 1]        # mesh points per axis
 
 [solver]
 name = "function"
@@ -43,6 +43,7 @@ simplex_mode = true  # enforce fractions that sum exactly to 1.0
 [hea.metric]
 name = "total_energy"
 # pattern = "sigma=\\s*([-.0-9Ee]+)"  # uncomment to minimize a custom scalar such as conductivity
+# transform = "abs"
 
 [[hea.species]]
 label = "Y"
