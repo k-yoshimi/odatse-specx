@@ -1,132 +1,132 @@
-# テストスイートの説明
+# Test Suite Documentation
 
-`test_generate_input.py`は、`generate_input.py`モジュールの機能をテストするための包括的なテストスイートです。
+`test_generate_input.py` is a comprehensive test suite for testing the functionality of the `generate_input.py` module.
 
-## テストの実行方法
+## How to Run Tests
 
-### すべてのテストを一括実行（推奨）
+### Run All Tests at Once (Recommended)
 
 ```bash
-# pytestを使用（推奨）
+# Using pytest (recommended)
 python -m pytest test_*.py -v
 
-# または、カレントディレクトリのすべてのテストを実行
+# Or run all tests in the current directory
 python -m pytest -v
 
-# より詳細な出力
+# More detailed output
 python -m pytest test_*.py -vv
 ```
 
-### unittestを使用
+### Using unittest
 
 ```bash
-# すべてのテストファイルを一括実行
+# Run all test files at once
 python -m unittest discover -v
 
-# または、特定のパターンでテストを検索
+# Or search for tests with a specific pattern
 python -m unittest discover -p "test_*.py" -v
 ```
 
-### 個別のテストファイルを実行
+### Run Individual Test Files
 
 ```bash
-# test_generate_input.pyのみ
+# test_generate_input.py only
 python -m pytest test_generate_input.py -v
 
-# test_optimize_composition.pyのみ
+# test_optimize_composition.py only
 python -m pytest test_optimize_composition.py -v
 
-# または、unittestを使用
+# Or using unittest
 python3 test_generate_input.py -v
 python3 -m unittest test_generate_input.py -v
 ```
 
-## テスト構成
+## Test Structure
 
-テストスイートは以下の7つのテストクラスで構成されています：
+The test suite consists of the following 7 test classes:
 
-### 1. TestLoadInputFile (5テスト)
+### 1. TestLoadInputFile (5 tests)
 
-`load_input_file()`関数のテスト
+Tests for `load_input_file()` function
 
-- `test_load_input_file_basic`: 基本的な読み込みテスト
-- `test_load_input_file_ntyp`: ntypの値が正しく読み込まれているか
-- `test_load_input_file_atom_type_definitions`: 原子タイプ定義が正しく読み込まれているか
-- `test_load_input_file_atomic_positions`: 原子位置が正しく読み込まれているか
-- `test_load_input_file_immutability`: 複数回読み込んでも同じ結果が得られるか
+- `test_load_input_file_basic`: Basic loading test
+- `test_load_input_file_ntyp`: Test that ntyp value is correctly loaded
+- `test_load_input_file_atom_type_definitions`: Test that atom type definitions are correctly loaded
+- `test_load_input_file_atomic_positions`: Test that atomic positions are correctly loaded
+- `test_load_input_file_immutability`: Test that the same result is obtained when loading multiple times
 
-### 2. TestReplaceAtomTypes (3テスト)
+### 2. TestReplaceAtomTypes (3 tests)
 
-`replace_atom_types()`関数のテスト
+Tests for `replace_atom_types()` function
 
-- `test_replace_atom_types_basic`: 基本的な置換テスト
-- `test_replace_atom_types_multiple`: 複数の原子を置換
-- `test_replace_atom_types_immutability`: 元のデータが保持されるか
+- `test_replace_atom_types_basic`: Basic replacement test
+- `test_replace_atom_types_multiple`: Replace multiple atoms
+- `test_replace_atom_types_immutability`: Test that original data is preserved
 
-### 3. TestReplaceAtomTypesByCoordinates (2テスト)
+### 3. TestReplaceAtomTypesByCoordinates (2 tests)
 
-`replace_atom_types_by_coordinates()`関数のテスト
+Tests for `replace_atom_types_by_coordinates()` function
 
-- `test_replace_atom_types_by_coordinates_basic`: 座標指定での置換テスト
-- `test_replace_atom_types_by_coordinates_immutability`: 元のデータが保持されるか
+- `test_replace_atom_types_by_coordinates_basic`: Replacement test by coordinate specification
+- `test_replace_atom_types_by_coordinates_immutability`: Test that original data is preserved
 
-### 4. TestReplaceAtomTypesByLabel (4テスト)
+### 4. TestReplaceAtomTypesByLabel (4 tests)
 
-`replace_atom_types_by_label()`関数のテスト
+Tests for `replace_atom_types_by_label()` function
 
-- `test_replace_atom_types_by_label_basic`: 基本的なラベル置換テスト
-- `test_replace_atom_types_by_label_all_instances`: 同じラベルのすべての原子が置換されるか
-- `test_replace_atom_types_by_label_multiple`: 複数のラベルを同時に置換
-- `test_replace_atom_types_by_label_immutability`: 元のデータが保持されるか
+- `test_replace_atom_types_by_label_basic`: Basic label replacement test
+- `test_replace_atom_types_by_label_all_instances`: Test that all atoms with the same label are replaced
+- `test_replace_atom_types_by_label_multiple`: Replace multiple labels simultaneously
+- `test_replace_atom_types_by_label_immutability`: Test that original data is preserved
 
-### 5. TestAddAtomTypeDefinition (3テスト)
+### 5. TestAddAtomTypeDefinition (3 tests)
 
-`add_atom_type_definition()`関数のテスト
+Tests for `add_atom_type_definition()` function
 
-- `test_add_atom_type_definition_basic`: 基本的な原子タイプ追加テスト
-- `test_add_atom_type_definition_mixed`: 混合原子タイプの追加テスト
-- `test_add_atom_type_definition_immutability`: 元のデータが保持されるか
+- `test_add_atom_type_definition_basic`: Basic atom type addition test
+- `test_add_atom_type_definition_mixed`: Mixed atom type addition test
+- `test_add_atom_type_definition_immutability`: Test that original data is preserved
 
-### 6. TestWriteInputFile (3テスト)
+### 6. TestWriteInputFile (3 tests)
 
-`write_input_file()`関数のテスト
+Tests for `write_input_file()` function
 
-- `test_write_input_file_basic`: 基本的な書き込みテスト
-- `test_write_input_file_only_used_types`: 使用されている原子タイプのみが書き出されるか
-- `test_write_input_file_create_directory`: 存在しないディレクトリが自動的に作成されるか
+- `test_write_input_file_basic`: Basic write test
+- `test_write_input_file_only_used_types`: Test that only used atom types are written
+- `test_write_input_file_create_directory`: Test that non-existent directories are automatically created
 
-### 7. TestIntegration (2テスト)
+### 7. TestIntegration (2 tests)
 
-統合テスト
+Integration tests
 
-- `test_full_workflow`: 完全なワークフローのテスト（新しい原子タイプ追加→置換→書き出し→読み込み）
-- `test_multiple_variations_from_same_data`: 同じデータから複数のバリエーションを生成
+- `test_full_workflow`: Complete workflow test (add new atom type → replace → write → read)
+- `test_multiple_variations_from_same_data`: Generate multiple variations from the same data
 
-## テストのカバレッジ
+## Test Coverage
 
-テストスイートは以下の機能をカバーしています：
+The test suite covers the following functionality:
 
-- ✅ 入力ファイルの読み込み
-- ✅ インデックス指定での原子置換
-- ✅ 座標指定での原子置換
-- ✅ ラベル指定での一括置換
-- ✅ 新しい原子種の定義（単一・混合）
-- ✅ ファイルへの書き出し
-- ✅ ディレクトリの自動作成
-- ✅ データの不変性（元のデータが保持されること）
-- ✅ 統合ワークフロー
+- ✅ Input file loading
+- ✅ Atom replacement by index
+- ✅ Atom replacement by coordinates
+- ✅ Batch replacement by label
+- ✅ New atom species definition (single and mixed)
+- ✅ File writing
+- ✅ Automatic directory creation
+- ✅ Data immutability (original data is preserved)
+- ✅ Integrated workflow
 
-## テストの前提条件
+## Test Prerequisites
 
-テストは以下のファイルを前提としています：
+Tests assume the following file exists:
 
-- `refs/odatse-specx/test-1/test.in`: テスト用の入力ファイル
+- `refs/odatse-specx/test-1/test.in`: Input file for testing
 
-このファイルが存在しない場合、テストは失敗します。
+If this file does not exist, tests will fail.
 
-## テストの実行結果の例
+## Example Test Execution Results
 
-正常に実行された場合、以下のような出力が表示されます：
+When executed successfully, the following output is displayed:
 
 ```
 test_add_atom_type_definition_basic ... ok
@@ -158,44 +158,43 @@ Ran 22 tests in 0.011s
 OK
 ```
 
-## トラブルシューティング
+## Troubleshooting
 
-### テストが失敗する場合
+### When Tests Fail
 
-1. **ファイルが見つからないエラー**
-   - `refs/odatse-specx/test-4/test.in`が存在することを確認してください
+1. **File not found error**
+   - Ensure that `refs/odatse-specx/test-4/test.in` exists
 
-2. **インポートエラー**
-   - `generate_input.py`が同じディレクトリにあることを確認してください
+2. **Import error**
+   - Ensure that `generate_input.py` is in the same directory
 
-3. **権限エラー**
-   - 一時ファイルの作成に必要な権限があることを確認してください
+3. **Permission error**
+   - Ensure that you have the necessary permissions to create temporary files
 
-## テストの拡張
+## Extending Tests
 
-新しい機能を追加した場合は、対応するテストも追加してください。テストの構造は以下の通りです：
+When adding new functionality, also add corresponding tests. The test structure is as follows:
 
 ```python
 class TestNewFeature(unittest.TestCase):
-    """新しい機能のテスト"""
+    """Tests for new feature"""
 
     def setUp(self):
-        """テストのセットアップ"""
+        """Test setup"""
         self.test_input_file = "refs/odatse-specx/test-4/test.in"
         self.sample_input_data = load_input_file(self.test_input_file)
 
     def test_new_feature_basic(self):
-        """基本的な機能テスト"""
-        # テストコード
+        """Basic functionality test"""
+        # Test code
         pass
 
     def test_new_feature_immutability(self):
-        """不変性のテスト"""
-        # テストコード
+        """Immutability test"""
+        # Test code
         pass
 ```
 
-## 参考資料
+## References
 
-- [Python unittest ドキュメント](https://docs.python.org/3/library/unittest.html)
-
+- [Python unittest Documentation](https://docs.python.org/3/library/unittest.html)

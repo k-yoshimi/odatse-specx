@@ -175,18 +175,18 @@ class TestHEAObjectiveSimplexMode(unittest.TestCase):
         self.assertFalse(np.allclose(fractions, different_fractions))
 
     def test_simplex_mode_all_ones_behavior(self):
-        """全てが1の場合の挙動を確認"""
+        """Test behavior when all values are 1"""
         objective = self._instantiate_objective()
 
-        # 全てが1.0の場合
+        # When all are 1.0
         params_all_one = np.array([1.0, 1.0, 1.0], dtype=float)
         fractions = objective._to_fractions(params_all_one)
 
         self.assertEqual(len(fractions), 4)
         self.assertAlmostEqual(fractions.sum(), 1.0, places=6)
-        # 全てが1の場合、最初の成分が大部分を占める
+        # When all are 1, the first component occupies most of the remainder
         self.assertGreater(fractions[0], 0.99)
-        # 残りの成分は非常に小さい
+        # Remaining components are very small
         self.assertLess(fractions[1], 0.01)
         self.assertLess(fractions[2], 0.01)
         self.assertLess(fractions[3], 0.01)

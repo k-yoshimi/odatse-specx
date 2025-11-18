@@ -1,213 +1,216 @@
-# optimize_composition.py パラメータマニュアル
+# optimize_composition.py Parameter Manual
 
 NAME
-    optimize_composition.py - AkaiKKRを用いたハイエントロピー合金組成最適化ツール
+    optimize_composition.py - High-entropy alloy composition optimization tool using AkaiKKR
 
 SYNOPSIS
     python optimize_composition.py <config_file> [--mock-output PATH]
 
 DESCRIPTION
-    `optimize_composition.py` は、ODAT-SEの探索アルゴリズムとAkaiKKR計算を結合し、
-    ハイエントロピー合金（HEA）の組成を自動的に探索するツールです。各候補組成は
-    AkaiKKR入力ファイルに変換され、計算が実行された後、出力ファイルから目的指標
-    （通常はtotal energy）を抽出してODAT-SEに返します。
+    `optimize_composition.py` combines ODAT-SE's search algorithms with AkaiKKR calculations
+    to automatically explore high-entropy alloy (HEA) compositions. Each candidate composition
+    is converted to an AkaiKKR input file, calculations are executed, and the objective metric
+    (usually total energy) is extracted from the output file and returned to ODAT-SE.
 
-    設定はTOML形式のファイルで指定します。以下のセクションで構成されます：
+    Configuration is specified in a TOML format file. It consists of the following sections:
 
-    - [base]          ODAT-SEの基本設定
-    - [algorithm]     探索アルゴリズムの設定
-    - [algorithm.param] アルゴリズムパラメータ
-    - [solver]       ソルバー設定
-    - [runner]       ランナー設定
-    - [hea]          HEA最適化の主要設定
-    - [hea.metric]   指標抽出設定
-    - [[hea.species]] 原子種の定義（配列）
+    - [base]          ODAT-SE basic settings
+    - [algorithm]     Search algorithm settings
+    - [algorithm.param] Algorithm parameters
+    - [solver]       Solver settings
+    - [runner]       Runner settings
+    - [hea]          Main HEA optimization settings
+    - [hea.metric]   Metric extraction settings
+    - [[hea.species]] Atom species definitions (array)
 
 CONFIGURATION SECTIONS
 
 [base]
-    基本設定セクション。ODAT-SEの基本パラメータを指定します。
+    Basic settings section. Specifies ODAT-SE basic parameters.
 
     dimension (integer, required)
-        探索空間の次元数。simplex_modeが有効な場合、原子種数-1に設定します。
-        例: 4元合金でsimplex_mode=trueの場合、dimension=3
+        Dimension of the search space. When simplex_mode is enabled, set to number of
+        species - 1.
+        Example: For 4-element alloy with simplex_mode=true, dimension=3
 
     root_dir (string, optional, default: ".")
-        作業ディレクトリのルートパス。相対パスはこのディレクトリを基準に解決されます。
+        Root path of the working directory. Relative paths are resolved relative to this
+        directory.
 
     output_dir (string, optional, default: "odatse/output")
-        ODAT-SEの出力ディレクトリ。
+        ODAT-SE output directory.
 
 [algorithm]
-    探索アルゴリズムの設定セクション。
+    Search algorithm settings section.
 
     name (string, required)
-        使用するアルゴリズム名。例: "mapper" など。
+        Algorithm name to use. Example: "mapper", etc.
 
     seed (integer, optional)
-        乱数シード。再現性のある結果を得るために指定します。
+        Random seed. Specify for reproducible results.
 
     colormap (string, optional)
-        カラーマップファイルのパス。
+        Path to colormap file.
 
 [algorithm.param]
-    アルゴリズム固有のパラメータセクション。
+    Algorithm-specific parameters section.
 
     min_list (array of floats, required)
-        各次元の下限値のリスト。長さはdimensionと一致する必要があります。
-        例: [0.0, 0.0, 0.0]
+        List of lower bounds for each dimension. Length must match dimension.
+        Example: [0.0, 0.0, 0.0]
 
     max_list (array of floats, required)
-        各次元の上限値のリスト。長さはdimensionと一致する必要があります。
-        例: [1.0, 1.0, 1.0]
+        List of upper bounds for each dimension. Length must match dimension.
+        Example: [1.0, 1.0, 1.0]
 
     num_list (array of integers, required)
-        各次元のグリッド点数（mapperアルゴリズムの場合）。
-        例: [5, 5, 5]
+        Number of grid points per dimension (for mapper algorithm).
+        Example: [5, 5, 5]
 
 [solver]
-    ソルバー設定セクション。
+    Solver settings section.
 
     name (string, required)
-        ソルバー名。 "function" を指定します。
+        Solver name. Specify "function".
 
 [runner]
-    ランナー設定セクション。
+    Runner settings section.
 
     [runner.log]
-        ログ設定のサブセクション。
+        Log settings subsection.
 
         interval (integer, optional, default: 10)
-            ログ出力間隔（試行数）。
+            Log output interval (number of trials).
 
 [hea]
-    HEA最適化の主要設定セクション。このセクションは必須です。
+    Main HEA optimization settings section. This section is required.
 
     template_input (string, required)
-        AkaiKKR入力ファイルのテンプレートパス。このファイルを読み込み、
-        指定された原子種ラベルを混合原子種に置き換えます。
+        Template path of AkaiKKR input file. This file is loaded and the specified atom
+        species label is replaced with a mixed atom species.
 
     target_label (string, required)
-        置き換え対象の原子種ラベル。このラベルを持つ原子種が混合原子種に
-        置き換えられます。例: "Y_1h_2"
+        Atom species label to replace. Atoms with this label are replaced with a mixed
+        atom species. Example: "Y_1h_2"
 
     new_label (string, optional, default: "{target_label}_mix")
-        新しく作成する混合原子種のラベル名。例: "Ln_HEA"
+        Label name of the newly created mixed atom species. Example: "Ln_HEA"
 
     work_dir (string, optional, default: "runs")
-        各試行の作業ディレクトリのベースパス。各試行は
-        {work_dir}/trial_{試行番号:05d} に作成されます。
+        Base path of working directory for each trial. Each trial is created at
+        {work_dir}/trial_{trial_number:05d}.
 
     output_file (string, optional, default: "test.out")
-        AkaiKKRが生成する出力ファイル名。このファイルから指標を抽出します。
+        Output filename generated by AkaiKKR. Metrics are extracted from this file.
 
     akai_command (array of strings or string, required)
-        AkaiKKRを実行するコマンド。配列形式または文字列形式で指定できます。
-        プレースホルダーとして以下が使用可能です：
-        - {input}     入力ファイル名のみ（例: "test.in"）
-        - {input_path} 入力ファイルのフルパス
+        Command to execute AkaiKKR. Can be specified as array or string format.
+        The following placeholders are available:
+        - {input}     Input filename only (e.g., "test.in")
+        - {input_path} Full path to input file
 
-        例:
+        Examples:
           akai_command = ["akaiKKR", "{input}"]
           akai_command = ["/usr/local/bin/akaiKKR", "-option", "{input_path}"]
 
     keep_intermediate (boolean, optional, default: false)
-        trueに設定すると、各試行の作業ディレクトリを保持します。
-        falseの場合、成功した試行のディレクトリは削除されます。
-        エラーが発生した場合でも、この設定に従ってファイルが保持/削除されます。
+        If set to true, working directories for each trial are preserved.
+        If false, directories for successful trials are deleted.
+        Even when errors occur, files are preserved/deleted according to this setting.
 
     mock_output (string, optional)
-        動作確認用のモック出力ファイルパス。指定すると、AkaiKKRを実行せずに
-        このファイルをコピーして使用します。実計算時は設定しないでください。
-        一時的な動作確認には、TOMLを汚さずにCLIの--mock-outputで上書きする
-        運用を推奨します。
+        Mock output file path for testing. If specified, this file is copied and used
+        without running AkaiKKR. Do not set this for actual calculations.
+        For temporary testing, it is recommended to override via CLI --mock-output
+        without modifying the TOML.
 
     simplex_mode (boolean, optional, default: false)
-        trueに設定すると、stick-breaking変換を使用して、常に総和が1.0になる
-        組成を生成します。この場合、base.dimensionは原子種数-1に設定する必要があります。
+        If set to true, uses stick-breaking transformation to always generate compositions
+        that sum to 1.0. In this case, base.dimension must be set to number of species - 1.
 
     error_penalty (float, optional, default: 1.0e10)
-        計算が失敗した場合に返すペナルティ値。最適化アルゴリズムが失敗した
-        組成点を避けるために使用されます。
+        Penalty value returned when calculation fails. Used to make the optimization
+        algorithm avoid failed composition points.
 
     error_log (string, optional)
-        エラーログファイルのパス。指定すると、エラーが発生した試行の詳細情報が
-        記録されます。ログには以下が含まれます：
-        - エラーの種類とメッセージ
-        - 試行番号と組成パラメータ
-        - 入力ファイル、出力ファイル、試行ディレクトリのパス
+        Path to error log file. If specified, detailed information about failed trials
+        is recorded. The log includes:
+        - Error type and message
+        - Trial number and composition parameters
+        - Paths to input file, output file, and trial directory
 
     timeout_sec (integer, optional)
-        AkaiKKR実行のタイムアウト時間（秒）。指定しない場合、タイムアウトは
-        適用されません。
+        Timeout time (seconds) for AkaiKKR execution. If not specified, no timeout
+        is applied.
 
     env (dictionary, optional)
-        AkaiKKR実行時に設定する環境変数の辞書。例:
+        Dictionary of environment variables to set when executing AkaiKKR. Example:
           env = { "OMP_NUM_THREADS" = "4" }
 
     rmt (float, optional)
-        混合原子種のMT半径。指定しない場合、target_labelの原子種のrmt値が
-        使用されます。
+        MT radius of mixed atom species. If not specified, the rmt value of the
+        target_label atom species is used.
 
     field (float, optional)
-        混合原子種の磁場。指定しない場合、target_labelの原子種のfield値が
-        使用されます。
+        Magnetic field of mixed atom species. If not specified, the field value of
+        the target_label atom species is used.
 
     mxl (integer, optional)
-        混合原子種の最大角運動量。指定しない場合、target_labelの原子種の
-        mxl値が使用されます。
+        Maximum angular momentum of mixed atom species. If not specified, the mxl
+        value of the target_label atom species is used.
 
 [hea.metric]
-    指標抽出設定セクション。AkaiKKR出力ファイルから目的指標を抽出する方法を
-    指定します。
+    Metric extraction settings section. Specifies how to extract the objective metric
+    from AkaiKKR output files.
 
     name (string, optional, default: "total_energy")
-        指標名。以下のビルトインパターンが利用可能です：
-        - "total_energy"  total energyを抽出（デフォルト）
-        - "band_energy"   band energyを抽出
+        Metric name. The following built-in patterns are available:
+        - "total_energy"  Extract total energy (default)
+        - "band_energy"   Extract band energy
 
-        カスタム指標を使用する場合は、patternも指定してください。
+        If using a custom metric, also specify pattern.
 
     pattern (string, optional)
-        指標を抽出するための正規表現パターン。nameで指定したビルトインパターンが
-        使用できない場合、またはカスタムパターンを使用する場合に指定します。
+        Regular expression pattern to extract the metric. Specify when the built-in
+        pattern specified by name cannot be used, or when using a custom pattern.
 
-        例:
-          pattern = "sigma=\\s*([-.0-9Ee]+)"  # 伝導度を抽出
+        Example:
+          pattern = "sigma=\\s*([-.0-9Ee]+)"  # Extract conductivity
 
     group (integer, optional, default: 1)
-        正規表現のキャプチャグループ番号。抽出したい数値が含まれるグループを
-        指定します。
+        Capture group number in the regular expression. Specify the group containing
+        the numeric value to extract.
 
     scale (float, optional, default: 1.0)
-        抽出した値に掛けるスカラー値。単位換算や符号反転に使用します。
+        Scalar value to multiply the extracted value. Used for unit conversion or
+        sign inversion.
 
     transform (string, optional, default: "identity")
-        抽出後の値に適用する変換。利用可能: identity / abs / log / log1p / sqrt / square。
-        例: total energy を平滑化する場合は `transform = "log1p"`。
-        カスタム変換を追加したい場合は、`optimize_composition.py` 内の
-        `MetricExtractor._TRANSFORMS` に例えば `"cube": lambda x: x ** 3` のように
-        1行追記し、TOMLで `transform = "cube"` と指定してください。
+        Transformation to apply to the extracted value. Available: identity / abs / log / log1p / sqrt / square.
+        Example: To smooth total energy, use `transform = "log1p"`.
+        To add custom transformations, add one line like `"cube": lambda x: x ** 3`
+        to `MetricExtractor._TRANSFORMS` in `optimize_composition.py`, then specify
+        `transform = "cube"` in TOML.
 
     ignore_case (boolean, optional, default: true)
-        trueの場合、大文字小文字を区別せずに検索します。
+        If true, performs case-insensitive search.
 
 [[hea.species]]
-    原子種定義の配列セクション。混合する各原子種を定義します。少なくとも1つ、
-    simplex_modeが有効な場合は少なくとも2つのエントリが必要です。
+    Array section for atom species definitions. Defines each atom species to mix. At least one
+    entry is required, and at least two entries are required when simplex_mode is enabled.
 
     label (string, required)
-        原子種のラベル名。例: "Y", "La", "Nd"
+        Label name of the atom species. Example: "Y", "La", "Nd"
 
     atomic_number (integer, required)
-        原子番号。例: 39 (Y), 57 (La), 60 (Nd)
+        Atomic number. Example: 39 (Y), 57 (La), 60 (Nd)
 
     symbol (string, optional)
-        labelの代替指定。labelが指定されていない場合に使用されます。
+        Alternative specification for label. Used when label is not specified.
 
 EXAMPLES
 
-基本的な4元合金の組成探索:
+Basic 4-element alloy composition exploration:
 
     [base]
     dimension = 3
@@ -261,7 +264,7 @@ EXAMPLES
     label = "Sm"
     atomic_number = 62
 
-カスタム指標（伝導度）を最小化する例:
+Example of minimizing a custom metric (conductivity):
 
     [hea.metric]
     name = "conductivity"
@@ -270,35 +273,35 @@ EXAMPLES
     ignore_case = true
     group = 1
 
-環境変数を設定してAkaiKKRを実行する例:
+Example of executing AkaiKKR with environment variables set:
 
     [hea]
     akai_command = ["/usr/local/bin/akaiKKR", "{input}"]
     env = { "OMP_NUM_THREADS" = "4", "MKL_NUM_THREADS" = "4" }
     timeout_sec = 3600
 
-モック出力を使ってAkaiKKRを実行せずに動作確認する例:
+Example of testing without running AkaiKKR using mock output:
 
     python optimize_composition.py hea_mapper.toml --mock-output refs/odatse-specx/test-1/test.out
 
 NOTES
 
-次元数の設定:
-    simplex_modeが有効な場合、base.dimensionは原子種数-1に設定する必要があります。
-    例: 4元合金の場合、dimension=3
+Dimension settings:
+    When simplex_mode is enabled, base.dimension must be set to number of species - 1.
+    Example: For 4-element alloy, dimension=3
 
-    simplex_modeが無効な場合、base.dimensionは原子種数に設定します。
-    例: 4元合金の場合、dimension=4
+    When simplex_mode is disabled, base.dimension is set to number of species.
+    Example: For 4-element alloy, dimension=4
 
-stick-breaking変換:
-    simplex_modeが有効な場合、ODAT-SEから渡されるN-1個のパラメータが
-    stick-breaking変換により、常に総和が1.0になるN個の濃度に変換されます。
-    これにより、組成の制約が自動的に満たされます。
+Stick-breaking transformation:
+    When simplex_mode is enabled, N-1 parameters passed from ODAT-SE are transformed
+    by stick-breaking transformation into N concentrations that always sum to 1.0.
+    This automatically satisfies composition constraints.
 
-エラーハンドリング:
-    計算が失敗した場合、error_penaltyで指定した値（デフォルト: 1.0e10）が
-    返されます。これにより、最適化アルゴリズムは失敗した組成点を避けるよう
-    になります。error_logが指定されている場合、エラーの詳細が記録されます。
+Error handling:
+    When a calculation fails, the value specified by error_penalty (default: 1.0e10)
+    is returned. This causes the optimization algorithm to avoid failed composition
+    points. If error_log is specified, error details are recorded.
 
 SEE ALSO
     README.md

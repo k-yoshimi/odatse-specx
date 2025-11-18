@@ -1,8 +1,8 @@
 """
-AkaiKKR入力ファイル生成モジュール
+AkaiKKR input file generation module
 
-位置（atmicx）は同じまま、粒子の種類（atmtyp）を変更して
-新しい入力ファイルを生成する機能を提供する。
+Provides functionality to generate new input files by changing particle types
+(atmtyp) while keeping positions (atmicx) the same.
 """
 
 from pathlib import Path
@@ -13,18 +13,18 @@ def parse_atomic_positions(
     input_lines: List[str],
 ) -> Tuple[List[str], List[Tuple[str, str, str, str]]]:
     """
-    AkaiKKR入力ファイルから原子位置情報を抽出する。
+    Extract atomic position information from an AkaiKKR input file.
 
     Parameters
     ----------
     input_lines : List[str]
-        入力ファイルの行リスト。
+        List of lines from the input file.
 
     Returns
     -------
     Tuple[List[str], List[Tuple[str, str, str, str]]]
-        ヘッダー行と原子位置情報のリスト。
-        原子位置情報は (x, y, z, atmtyp) のタプル。
+        Header lines and list of atomic position information.
+        Atomic position information is a tuple of (x, y, z, atmtyp).
     """
     header_lines = []
     atomic_positions = []
@@ -37,19 +37,19 @@ def parse_atomic_positions(
             continue
 
         if in_atomic_section:
-            # 空行やコメント行をスキップ
+            # Skip empty lines and comment lines
             stripped = line.strip()
             if not stripped or stripped.startswith("c") or stripped.startswith("#"):
                 if not stripped.startswith("end"):
                     header_lines.append(line)
                 continue
 
-            # endが見つかったら終了
+            # Exit when end is found
             if "end" in stripped.lower():
                 break
 
-            # 原子位置行をパース
-            # 形式: x y z atmtyp または xa yb zc atmtyp
+            # Parse atomic position line
+            # Format: x y z atmtyp or xa yb zc atmtyp
             parts = stripped.split()
             if len(parts) >= 4:
                 x = parts[0]
@@ -63,39 +63,39 @@ def parse_atomic_positions(
 
 def parse_atom_type_definitions(input_lines: List[str]) -> Tuple[int, List[Dict], int]:
     """
-    AkaiKKR入力ファイルから原子タイプ定義情報を抽出する。
+    Extract atom type definition information from an AkaiKKR input file.
 
     Parameters
     ----------
     input_lines : List[str]
-        入力ファイルの行リスト。
+        List of lines from the input file.
 
     Returns
     -------
     Tuple[int, List[Dict], int]
-        ntypの値、原子タイプ定義のリスト、ntypセクションの開始インデックス。
-        各原子タイプ定義は以下のキーを持つ辞書：
-        - 'type': タイプ名
-        - 'ncmp': 原子種数
-        - 'rmt': マフィンティン半径
-        - 'field': 外部磁場
-        - 'mxl': 角運動量最大値
-        - 'atoms': [(anclr, conc), ...] のリスト
+        ntyp value, list of atom type definitions, and starting index of ntyp section.
+        Each atom type definition is a dictionary with the following keys:
+        - 'type': Type name
+        - 'ncmp': Number of atom species
+        - 'rmt': Muffin-tin radius
+        - 'field': External magnetic field
+        - 'mxl': Maximum angular momentum
+        - 'atoms': List of [(anclr, conc), ...]
     """
     ntyp = None
     atom_types = []
     ntyp_start_idx = None
     i = 0
 
-    # ntyp行を見つける（コメント行に含まれている場合も考慮）
+    # Find ntyp line (also consider if it's in a comment line)
     while i < len(input_lines):
         line = input_lines[i]
         stripped = line.strip()
 
-        # ntyp行を見つける（コメント行でも可）
+        # Find ntyp line (can be in comment line)
         if "ntyp" in stripped.lower():
             ntyp_start_idx = i
-            # 次の行からntypの値を読み取る
+            # Read ntyp value from next line
             i += 1
             while i < len(input_lines):
                 next_line = input_lines[i].strip()
@@ -113,39 +113,39 @@ def parse_atom_type_definitions(input_lines: List[str]) -> Tuple[int, List[Dict]
     if ntyp_start_idx is None:
         return 0, [], 0
 
-    # typ行を見つける
+    # Find typ line
     while i < len(input_lines):
         line = input_lines[i]
         stripped = line.strip()
 
-        # typ行を見つける
+        # Find typ line
         if "typ" in stripped.lower() and "ncmp" in stripped.lower():
             i += 1
             break
         i += 1
 
-    # 原子タイプ定義を読み取る
+    # Read atom type definitions
     while i < len(input_lines) and len(atom_types) < (ntyp or float("inf")):
         line = input_lines[i]
         stripped = line.strip()
 
-        # コメント行や空行をスキップ
+        # Skip comment lines and empty lines
         if not stripped or stripped.startswith("c") or stripped.startswith("#"):
-            # セクション区切り（natmなど）を見つけたら終了
+            # Exit when section delimiter (natm, etc.) is found
             if "natm" in stripped.lower() or "atmicx" in stripped.lower():
                 break
             i += 1
             continue
 
-        # セクション区切りを見つけたら終了
+        # Exit when section delimiter is found
         if "natm" in stripped.lower() or "atmicx" in stripped.lower():
             break
 
-        # 原子タイプ定義行をパース
-        # タブや複数の空白を考慮して分割
+        # Parse atom type definition line
+        # Split considering tabs and multiple spaces
         parts = stripped.split()
         if len(parts) >= 5:
-            # type名 ncmp rmt field mxl
+            # type name ncmp rmt field mxl
             type_name = parts[0]
             try:
                 ncmp = int(parts[1])
@@ -165,12 +165,12 @@ def parse_atom_type_definitions(input_lines: List[str]) -> Tuple[int, List[Dict]
                 "atoms": [],
             }
 
-            # 次の行からanclrとconcを読み取る
+            # Read anclr and conc from next lines
             i += 1
             atom_count = 0
             while atom_count < ncmp and i < len(input_lines):
                 atom_line = input_lines[i]
-                # タブを空白に置換してから処理
+                # Replace tabs with spaces before processing
                 atom_line_clean = atom_line.replace("\t", " ").strip()
                 if atom_line_clean and not atom_line_clean.startswith("c"):
                     atom_parts = atom_line_clean.split()
@@ -187,10 +187,10 @@ def parse_atom_type_definitions(input_lines: List[str]) -> Tuple[int, List[Dict]
             if current_type and len(current_type["atoms"]) == ncmp:
                 atom_types.append(current_type)
         else:
-            # partsが5つ未満の場合は次の行へ
+            # Move to next line if parts is less than 5
             i += 1
 
-    # ntypが見つからない場合は、atom_typesの数から推測
+    # If ntyp is not found, infer from number of atom_types
     if ntyp is None:
         ntyp = len(atom_types)
     
@@ -199,23 +199,23 @@ def parse_atom_type_definitions(input_lines: List[str]) -> Tuple[int, List[Dict]
 
 def load_input_file(input_path: Union[str, Path]) -> Dict:
     """
-    AkaiKKR入力ファイルを読み込んで構造化データを返す。
+    Load AkaiKKR input file and return structured data.
 
     Parameters
     ----------
     input_path : Union[str, Path]
-        入力ファイルのパス。
+        Path to the input file.
 
     Returns
     -------
     Dict
-        解析された入力ファイルの情報を含む辞書。
-        - 'header': ファイルの先頭部分（ntyp以前）
-        - 'ntyp': 原子タイプ数
-        - 'atom_type_definitions': 原子タイプ定義のリスト
-        - 'atomic_header': atmicxセクションのヘッダー
-        - 'atomic_positions': 原子位置情報のリスト
-        - 'footer': ファイルの末尾部分（end以降）
+        Dictionary containing information about the parsed input file.
+        - 'header': Header part before ntyp
+        - 'ntyp': Number of atom types
+        - 'atom_type_definitions': List of atom type definitions
+        - 'atomic_header': Header of atmicx section
+        - 'atomic_positions': List of atomic position information
+        - 'footer': Footer part after end
 
     Examples
     --------
@@ -227,14 +227,14 @@ def load_input_file(input_path: Union[str, Path]) -> Dict:
     with open(input_path, "r", encoding="utf-8") as f:
         lines = f.readlines()
 
-    # 原子タイプ定義を解析
+    # Parse atom type definitions
     ntyp, atom_type_definitions, ntyp_start_idx = parse_atom_type_definitions(lines)
     
-    # ntypがNoneの場合は、atom_type_definitionsの数から推測
+    # If ntyp is None, infer from number of atom_type_definitions
     if ntyp is None:
         ntyp = len(atom_type_definitions)
 
-    # atmicxセクションを見つける
+    # Find atmicx section
     atomic_start_idx = None
     for i, line in enumerate(lines):
         if "atmicx" in line.lower() or "atmtyp" in line.lower():
@@ -244,13 +244,13 @@ def load_input_file(input_path: Union[str, Path]) -> Dict:
     if atomic_start_idx is None:
         raise ValueError("atmicx atmtyp section not found in input file")
 
-    # ヘッダー部分（ntyp以前）
+    # Header part (before ntyp)
     header = lines[:ntyp_start_idx]
 
-    # 原子位置セクション
+    # Atomic position section
     atomic_header, atomic_positions = parse_atomic_positions(lines[atomic_start_idx:])
 
-    # フッター部分（end以降）
+    # Footer part (after end)
     footer = []
     end_found = False
     for i in range(atomic_start_idx + len(atomic_header), len(lines)):
@@ -279,20 +279,20 @@ def replace_atom_types(
     atom_type_mapping: Dict[int, str],
 ) -> Dict:
     """
-    構造化データに対して、インデックス指定で原子の種類を置き換える。
+    Replace atom types in structured data by index specification.
 
     Parameters
     ----------
     input_data : Dict
-        load_input_file()で読み込んだ構造化データ。
+        Structured data loaded by load_input_file().
     atom_type_mapping : Dict[int, str]
-        原子インデックス（0始まり）から新しいatmtypへのマッピング。
-        例: {2: 'Ba_2t_0', 5: 'Cu_1a_5'}
+        Mapping from atom index (0-based) to new atmtyp.
+        Example: {2: 'Ba_2t_0', 5: 'Cu_1a_5'}
 
     Returns
     -------
     Dict
-        原子置換後の構造化データ（新しいコピー）。
+        Structured data with replaced atoms (new copy).
 
     Examples
     --------
@@ -302,7 +302,7 @@ def replace_atom_types(
     ...     {2: 'Ba_2t_0', 5: 'Cu_1a_5'}
     ... )
     """
-    # 新しいコピーを作成
+    # Create new copy
     new_data = {
         "header": input_data["header"][:],
         "ntyp": input_data.get("ntyp", 0),
@@ -314,7 +314,7 @@ def replace_atom_types(
         "footer": input_data["footer"][:],
     }
 
-    # 原子位置を更新
+    # Update atomic positions
     for idx, (x, y, z, atmtyp) in enumerate(input_data["atomic_positions"]):
         if idx in atom_type_mapping:
             new_atmtyp = atom_type_mapping[idx]
@@ -330,20 +330,20 @@ def replace_atom_types_by_coordinates(
     coordinate_mapping: Dict[Tuple[str, str, str], str],
 ) -> Dict:
     """
-    構造化データに対して、座標指定で原子の種類を置き換える。
+    Replace atom types in structured data by coordinate specification.
 
     Parameters
     ----------
     input_data : Dict
-        load_input_file()で読み込んだ構造化データ。
+        Structured data loaded by load_input_file().
     coordinate_mapping : Dict[Tuple[str, str, str], str]
-        座標 (x, y, z) から新しいatmtypへのマッピング。
-        例: {('0.5a', '0.5b', '0.5c'): 'Ba_2t_0'}
+        Mapping from coordinates (x, y, z) to new atmtyp.
+        Example: {('0.5a', '0.5b', '0.5c'): 'Ba_2t_0'}
 
     Returns
     -------
     Dict
-        原子置換後の構造化データ（新しいコピー）。
+        Structured data with replaced atoms (new copy).
 
     Examples
     --------
@@ -353,7 +353,7 @@ def replace_atom_types_by_coordinates(
     ...     {('0.50000000a', '0.50000000b', '0.50000000c'): 'Ba_2t_0'}
     ... )
     """
-    # 新しいコピーを作成
+    # Create new copy
     new_data = {
         "header": input_data["header"][:],
         "ntyp": input_data.get("ntyp", 0),
@@ -365,7 +365,7 @@ def replace_atom_types_by_coordinates(
         "footer": input_data["footer"][:],
     }
 
-    # 原子位置を更新
+    # Update atomic positions
     for x, y, z, atmtyp in input_data["atomic_positions"]:
         coord_key = (x, y, z)
         if coord_key in coordinate_mapping:
@@ -382,37 +382,36 @@ def replace_atom_types_by_label(
     label_mapping: Dict[str, str],
 ) -> Dict:
     """
-    構造化データに対して、ラベル（atmtyp）を指定して
-    同じラベルを持つすべての原子を一括で置き換える。
+    Replace all atoms with the same label (atmtyp) in structured data by label specification.
 
     Parameters
     ----------
     input_data : Dict
-        load_input_file()で読み込んだ構造化データ。
+        Structured data loaded by load_input_file().
     label_mapping : Dict[str, str]
-        元のラベルから新しいラベルへのマッピング。
-        例: {'Ba_2t_0': 'Y_1h_2', 'Cu_2q_3': 'Cu_1a_5'}
+        Mapping from original label to new label.
+        Example: {'Ba_2t_0': 'Y_1h_2', 'Cu_2q_3': 'Cu_1a_5'}
 
     Returns
     -------
     Dict
-        原子置換後の構造化データ（新しいコピー）。
+        Structured data with replaced atoms (new copy).
 
     Examples
     --------
     >>> input_data = load_input_file('test.in')
-    >>> # Ba_2t_0というラベルを持つすべての原子をY_1h_2に置き換え
+    >>> # Replace all atoms with label 'Ba_2t_0' with 'Y_1h_2'
     >>> modified_data = replace_atom_types_by_label(
     ...     input_data,
     ...     {'Ba_2t_0': 'Y_1h_2'}
     ... )
-    >>> # 複数のラベルを同時に置き換え
+    >>> # Replace multiple labels simultaneously
     >>> modified_data = replace_atom_types_by_label(
     ...     input_data,
     ...     {'Ba_2t_0': 'Y_1h_2', 'Cu_2q_3': 'Cu_1a_5'}
     ... )
     """
-    # 新しいコピーを作成
+    # Create new copy
     new_data = {
         "header": input_data["header"][:],
         "ntyp": input_data.get("ntyp", 0),
@@ -424,7 +423,7 @@ def replace_atom_types_by_label(
         "footer": input_data["footer"][:],
     }
 
-    # 原子位置を更新
+    # Update atomic positions
     for x, y, z, atmtyp in input_data["atomic_positions"]:
         if atmtyp in label_mapping:
             new_atmtyp = label_mapping[atmtyp]
@@ -445,34 +444,34 @@ def add_atom_type_definition(
     atoms: List[Tuple[int, float]],
 ) -> Dict:
     """
-    新しい原子種の定義を追加する。
+    Add a new atom species definition.
 
     Parameters
     ----------
     input_data : Dict
-        load_input_file()で読み込んだ構造化データ。
+        Structured data loaded by load_input_file().
     type_name : str
-        新しい原子タイプの名前（ラベル）。
+        Name of the new atom type (label).
     ncmp : int
-        そのサイトを占める原子種の数。
+        Number of atom species occupying the site.
     rmt : float
-        マフィンティン半径（0.0の場合は自動決定）。
+        Muffin-tin radius (0.0 for automatic determination).
     field : float
-        外部磁場。
+        External magnetic field.
     mxl : int
-        角運動量最大値。
+        Maximum angular momentum.
     atoms : List[Tuple[int, float]]
-        (原子番号, 濃度)のリスト。濃度の合計は100.0になることが推奨。
+        List of (atomic number, concentration). The sum of concentrations should be 100.0.
 
     Returns
     -------
     Dict
-        新しい原子種定義が追加された構造化データ（新しいコピー）。
+        Structured data with new atom species definition added (new copy).
 
     Examples
     --------
     >>> input_data = load_input_file('test.in')
-    >>> # 新しい原子種を追加
+    >>> # Add new atom species
     >>> new_data = add_atom_type_definition(
     ...     input_data,
     ...     type_name='New_Type',
@@ -480,10 +479,10 @@ def add_atom_type_definition(
     ...     rmt=0.0,
     ...     field=0.0,
     ...     mxl=2,
-    ...     atoms=[(26, 100.0)]  # Fe原子100%
+    ...     atoms=[(26, 100.0)]  # 100% Fe atoms
     ... )
     """
-    # 新しいコピーを作成
+    # Create new copy
     ntyp_value = input_data.get("ntyp")
     if ntyp_value is None:
         ntyp_value = len(input_data.get("atom_type_definitions", []))
@@ -499,7 +498,7 @@ def add_atom_type_definition(
         "footer": input_data["footer"][:],
     }
 
-    # 新しい原子タイプ定義を追加
+    # Add new atom type definition
     new_type_def = {
         "type": type_name,
         "ncmp": ncmp,
@@ -516,49 +515,49 @@ def add_atom_type_definition(
 
 def write_input_file(input_data: Dict, output_path: Union[str, Path]) -> None:
     """
-    構造化データをAkaiKKR入力ファイルとして書き出す。
+    Write structured data as an AkaiKKR input file.
 
-    出力先のディレクトリが存在しない場合は自動的に作成する。
+    Creates the output directory if it does not exist.
 
     Parameters
     ----------
     input_data : Dict
-        load_input_file()または置換関数で作成した構造化データ。
+        Structured data created by load_input_file() or replacement functions.
     output_path : Union[str, Path]
-        出力ファイルのパス。
+        Path to the output file.
 
     Examples
     --------
     >>> input_data = load_input_file('test.in')
     >>> modified_data = replace_atom_types(input_data, {2: 'Ba_2t_0'})
     >>> write_input_file(modified_data, 'test_new.in')
-    >>> # ディレクトリが存在しない場合も自動的に作成される
+    >>> # Directory is created automatically if it doesn't exist
     >>> write_input_file(modified_data, 'output/new_dir/test_new.in')
     """
     output_path = Path(output_path)
     
-    # 出力先のディレクトリが存在しない場合は作成
+    # Create output directory if it doesn't exist
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
     with open(output_path, "w", encoding="utf-8") as f:
-        # ヘッダー部分
+        # Header part
         f.writelines(input_data["header"])
 
-        # ntypセクション
+        # ntyp section
         if "ntyp" in input_data and "atom_type_definitions" in input_data:
-            # 実際に使用されている原子タイプを収集
+            # Collect actually used atom types
             used_types = set()
             for _, _, _, atmtyp in input_data["atomic_positions"]:
                 used_types.add(atmtyp)
 
-            # 使用されている原子タイプの定義のみをフィルタリング
+            # Filter only definitions of used atom types
             used_definitions = []
             type_def_dict = {
                 defn["type"]: defn
                 for defn in input_data["atom_type_definitions"]
             }
 
-            # 使用されているタイプの定義を順番に追加
+            # Add definitions of used types in order
             for _, _, _, atmtyp in input_data["atomic_positions"]:
                 if atmtyp in type_def_dict and atmtyp not in [
                     d["type"] for d in used_definitions
@@ -571,7 +570,7 @@ def write_input_file(input_data: Dict, output_path: Union[str, Path]) -> None:
             f.write("c------------------------------------------------------------\n")
             f.write("c   typ ncmp rmt field mxl [anclr conc]\n")
 
-            # 各原子タイプ定義
+            # Each atom type definition
             for type_def in used_definitions:
                 f.write(
                     f"    {type_def['type']}  {type_def['ncmp']}  "
@@ -580,44 +579,44 @@ def write_input_file(input_data: Dict, output_path: Union[str, Path]) -> None:
                 for anclr, conc in type_def["atoms"]:
                     f.write(f"                              {anclr}  {conc}\n")
 
-        # natmセクション（原子数）
+        # natm section (number of atoms)
         natm = len(input_data["atomic_positions"])
         f.write("c------------------------------------------------------------\n")
         f.write("c   natm\n")
         f.write(f"    {natm}\n")
         f.write("c------------------------------------------------------------\n")
 
-        # 原子位置セクションのヘッダー
-        # atomic_headerから区切り線（c---で始まる行）を削除（重複を避ける）
+        # Header of atomic position section
+        # Remove separator lines (lines starting with c---) from atomic_header (to avoid duplication)
         header_lines = [
             line for line in input_data["atomic_header"]
             if not line.strip().startswith("c---")
         ]
         f.writelines(header_lines)
 
-        # 原子位置
+        # Atomic positions
         for x, y, z, atmtyp in input_data["atomic_positions"]:
             f.write(f"    {x}  {y}  {z}  {atmtyp}\n")
 
-        # フッター部分
+        # Footer part
         f.writelines(input_data["footer"])
 
 
 def list_atomic_positions(input_data: Union[Dict, str, Path]) -> None:
     """
-    構造化データまたは入力ファイル内の原子位置を一覧表示する。
+    List atomic positions in structured data or input file.
 
     Parameters
     ----------
     input_data : Union[Dict, str, Path]
-        load_input_file()で読み込んだ構造化データ、または入力ファイルのパス。
+        Structured data loaded by load_input_file(), or input file path.
 
     Examples
     --------
-    >>> # 構造化データから表示
+    >>> # Display from structured data
     >>> input_data = load_input_file('test.in')
     >>> list_atomic_positions(input_data)
-    >>> # またはファイルパスから直接表示
+    >>> # Or display directly from file path
     >>> list_atomic_positions('test.in')
     """
     if isinstance(input_data, (str, Path)):
@@ -629,19 +628,19 @@ def list_atomic_positions(input_data: Union[Dict, str, Path]) -> None:
 
 
 if __name__ == "__main__":
-    # 使用例: 新しい原子種を定義して、ラベル指定での一括置換を行う
+    # Usage example: Define new atom species and perform batch replacement by label
     input_file = "refs/odatse-specx/test-1/test.in"
     output_file = "refs/odatse-specx/test-1/test_modified.in"
 
-    # 入力ファイルを読み込む
+    # Load input file
     input_data = load_input_file(input_file)
 
-    # 原子位置を一覧表示
+    # List atomic positions
     print("Original atomic positions:")
     list_atomic_positions(input_data)
     print()
 
-    # 新しい原子種を定義（Fe原子100%）
+    # Define new atom species (100% Fe atoms)
     new_data_with_type = add_atom_type_definition(
         input_data,
         type_name="Fe_new",
@@ -649,11 +648,11 @@ if __name__ == "__main__":
         rmt=0.0,
         field=0.0,
         mxl=2,
-        atoms=[(26, 100.0)],  # Fe原子（原子番号26）100%
+        atoms=[(26, 100.0)],  # 100% Fe atoms (atomic number 26)
     )
 
-    # ラベル指定での一括置換
-    # Ba_2t_0というラベルを持つすべての原子を新しく定義したFe_newに置き換え
+    # Batch replacement by label
+    # Replace all atoms with label 'Ba_2t_0' with newly defined Fe_new
     label_mapping = {"Ba_2t_0": "Fe_new"}
     modified_data = replace_atom_types_by_label(new_data_with_type, label_mapping)
     write_input_file(modified_data, output_file)
@@ -662,9 +661,9 @@ if __name__ == "__main__":
     print("  (Added Fe_new atom type and replaced all Ba_2t_0 atoms with it)")
     print()
 
-    # 別の例: 新しい混合原子種を定義して、複数のラベルを一括置換
+    # Another example: Define new mixed atom species and replace multiple labels
     output_file_2 = "refs/odatse-specx/test-1-out/test_modified_2.in"
-    # 新しい混合原子種（Y 50%, La 50%）を追加
+    # Add new mixed atom species (Y 50%, La 50%)
     new_data_with_mixed = add_atom_type_definition(
         input_data,
         type_name="Y0.5La0.5",
@@ -675,7 +674,7 @@ if __name__ == "__main__":
         atoms=[(39, 50.0), (57, 50.0)],  # Y 50%, La 50%
     )
 
-    # 複数のラベルを同時に新しい混合原子種に置き換え
+    # Replace multiple labels simultaneously with new mixed atom species
     label_mapping_2 = {
         "Ba_2t_0": "Y0.5La0.5",
         "Y_1h_2": "Y0.5La0.5",
