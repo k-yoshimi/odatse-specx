@@ -84,7 +84,7 @@ AkaiKKR計算をODAT-SEの探索アルゴリズムに接続して、ハイエン
 2. 動作確認のみを行う場合は `mock_output = "refs/REBCO/test-1/test.out"` を残しておくと、`refs/REBCO/test-1/test.out:523` の `total energy= -59275.587686117` を読み取り、AkaiKKR を実行せずに一連の処理をトレースできます。実際の計算では、`total energy=` と `total energy`（`=`なし）の両方の形式に対応しています。
 3. 実計算時は `mock_output` 行を削除し、`output_file` に AkaiKKR が出力するファイル名 (例: `test.out`) を指定して `python optimize_composition.py hea_mapper.toml` を実行します。`target_label`（例: `Y_1h_2`）に対応するサイトへ新しい混合ラベルが適用され、得られた `total energy` が ODAT-SE の目的関数として最小化されます。
 4. HEA の各濃度を厳密に 1 へ正規化したい場合は `[hea] simplex_mode = true` を指定してください。この場合、ODAT-SE の `base.dimension` と `algorithm.param.*` は `len([[hea.species]]) - 1` の次元数に合わせます（例: 4 元合金なら 3 次元）。Stick-breaking パラメータ化によって常に非負・総和 1 の組成が生成されます。
-5. 最適化したい指標は `[hea.metric]` で選択できます。デフォルトは `total_energy` ですが、`name = "band_energy"` や `pattern = "sigma=..."` のようにカスタム正規表現を指定することで、伝導度など別の観測量にも拡張できます。
+5. 最適化したい指標は `[hea.metric]` で選択できます。デフォルトは `total_energy` ですが、`name = "band_energy"` や `pattern = "sigma=..."` のようにカスタム正規表現を指定することで、伝導度など別の観測量にも拡張できます。また、抽出後の値に対して `transform` でメトリクス変換を適用できます（例: `log1p` や `abs`）。
 
 ## Appendix: simplex_modeアルゴリズム
 
@@ -134,6 +134,7 @@ AkaiKKR計算をODAT-SEの探索アルゴリズムに接続して、ハイエン
 [hea.metric]
 name = "total_energy"      # 既定のパターンを使用
 # name = "band_energy"     # バンドエネルギーを最小化する場合
+transform = "identity"     # 取得値への後処理: identity / abs / log / log1p / sqrt / square
 
 # AkaiKKR出力に「sigma = ...」があると仮定して伝導度を最小化する例
 # name = "conductivity"
@@ -141,6 +142,15 @@ name = "total_energy"      # 既定のパターンを使用
 # scale = 1.0              # 単位換算が必要なら適宜変更
 # ignore_case = true
 # group = 1
+
+# 例: total_energy を log1p で平滑化
+# name = "total_energy"
+# transform = "log1p"
+
+# 例: transform のプリセットを増やしたい場合（コード変更が必要）
+# - ファイル: optimize_composition.py の MetricExtractor._TRANSFORMS に追記
+# - 形式: "cube": lambda x: x ** 3  のように1行追加
+# 追加後は TOML で `transform = "cube"` と指定して利用できます。
 
 # spin momentを最小化する例
 # name = "spin_moment"

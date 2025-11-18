@@ -21,6 +21,7 @@ composition on the ``Y_1h_2`` site and parses the ``total energy`` field from
 from __future__ import annotations
 
 import argparse
+import math
 import os
 import re
 import shlex
@@ -60,6 +61,15 @@ def _as_command_list(command: Any) -> List[str]:
 class MetricExtractor:
     """Utility to parse scalar metrics from AkaiKKR output."""
 
+    _TRANSFORMS = {
+        "identity": lambda x: x,
+        "abs": lambda x: abs(x),
+        "log": lambda x: math.log(x),
+        "log1p": lambda x: math.log1p(x),
+        "sqrt": lambda x: math.sqrt(x),
+        "square": lambda x: x * x,
+    }
+
     def __init__(self, metric_cfg: Dict[str, Any]):
         name = metric_cfg.get("name", "total_energy")
         pattern = metric_cfg.get("pattern") or DEFAULT_METRIC_PATTERNS.get(name)
@@ -75,6 +85,16 @@ class MetricExtractor:
         self.scale = float(metric_cfg.get("scale", 1.0))
         self.name = name
 
+        transform_name = metric_cfg.get("transform", "identity")
+        transform = self._TRANSFORMS.get(transform_name)
+        if transform is None:
+            supported = ", ".join(sorted(self._TRANSFORMS))
+            raise ValueError(
+                f"Unsupported metric.transform '{transform_name}'. "
+                f"Choose from: {supported}"
+            )
+        self.transform = transform
+
     def extract(self, output_path: Path) -> float:
         if not output_path.exists():
             raise FileNotFoundError(f"{output_path} was not created by AkaiKKR.")
@@ -84,7 +104,8 @@ class MetricExtractor:
                 match = self.pattern.search(line)
                 if match:
                     value = float(match.group(self.group))
-                    return value * self.scale
+                    scaled = value * self.scale
+                    return self.transform(scaled)
 
         raise RuntimeError(
             f"Metric '{self.name}' not found in {output_path}. "

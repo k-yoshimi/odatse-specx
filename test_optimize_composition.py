@@ -1,3 +1,4 @@
+import math
 import sys
 import tempfile
 import types
@@ -359,6 +360,42 @@ class TestHEAObjectiveParseEnergy(unittest.TestCase):
 
             value = objective.metric.extract(output_file)
             self.assertAlmostEqual(value, 123.45)
+        finally:
+            tmpdir.cleanup()
+
+    def test_metric_transform_log1p(self):
+        tmpdir = tempfile.TemporaryDirectory()
+        try:
+            output_file = Path(tmpdir.name) / "test.out"
+            output_file.write_text("energy=9\n")
+
+            metric = MetricExtractor(
+                {
+                    "name": "custom",
+                    "pattern": r"energy=(\d+)",
+                    "transform": "log1p",
+                }
+            )
+            value = metric.extract(output_file)
+            self.assertAlmostEqual(value, math.log1p(9))
+        finally:
+            tmpdir.cleanup()
+
+    def test_metric_transform_abs(self):
+        tmpdir = tempfile.TemporaryDirectory()
+        try:
+            output_file = Path(tmpdir.name) / "test.out"
+            output_file.write_text("energy=-2.5\n")
+
+            metric = MetricExtractor(
+                {
+                    "name": "custom",
+                    "pattern": r"energy=([-\d.]+)",
+                    "transform": "abs",
+                }
+            )
+            value = metric.extract(output_file)
+            self.assertAlmostEqual(value, 2.5)
         finally:
             tmpdir.cleanup()
 

@@ -182,6 +182,13 @@ CONFIGURATION SECTIONS
     scale (float, optional, default: 1.0)
         抽出した値に掛けるスカラー値。単位換算や符号反転に使用します。
 
+    transform (string, optional, default: "identity")
+        抽出後の値に適用する変換。利用可能: identity / abs / log / log1p / sqrt / square。
+        例: total energy を平滑化する場合は `transform = "log1p"`。
+        カスタム変換を追加したい場合は、`optimize_composition.py` 内の
+        `MetricExtractor._TRANSFORMS` に例えば `"cube": lambda x: x ** 3` のように
+        1行追記し、TOMLで `transform = "cube"` と指定してください。
+
     ignore_case (boolean, optional, default: true)
         trueの場合、大文字小文字を区別せずに検索します。
 
