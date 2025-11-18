@@ -1,5 +1,10 @@
 # odatse-specx - AkaiKKR Input File Generation Tool
 
+[![Tests](https://github.com/k-yoshimi/odatse-specx/actions/workflows/test.yml/badge.svg)](https://github.com/k-yoshimi/odatse-specx/actions/workflows/test.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
+[![PyPI version](https://badge.fury.io/py/odatse-specx.svg)](https://badge.fury.io/py/odatse-specx)
+
 A Python tool for generating and editing AkaiKKR input files.
 
 ## Overview
