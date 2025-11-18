@@ -1,4 +1,4 @@
-# REBCO - AkaiKKR入力ファイル生成ツール
+# odatse-specx - AkaiKKR入力ファイル生成ツール
 
 AkaiKKRの入力ファイルを生成・編集するためのPythonツールです。
 
@@ -19,7 +19,7 @@ AkaiKKRの入力ファイルを生成・編集するためのPythonツールで�
 ## ファイル構成
 
 ```
-REBCO/
+odatse-specx/
 ├── README.md                 # このファイル（プロジェクト全体の説明）
 ├── generate_input.py         # メインのモジュール
 ├── README_generate_input.md  # generate_input.pyの詳細ドキュメント
@@ -27,7 +27,7 @@ REBCO/
 ├── README_test.md            # テストの説明
 ├── LICENSE                   # ライセンスファイル
 └── refs/                     # 参照用の入力ファイル
-    └── REBCO/
+    └── odatse-specx/
         └── test-1/
 ```
 
@@ -44,7 +44,7 @@ from generate_input import (
 )
 
 # 入力ファイルを読み込む
-input_data = load_input_file("refs/REBCO/test-4/test.in")
+input_data = load_input_file("refs/odatse-specx/test-4/test.in")
 
 # 新しい原子種を定義
 new_data = add_atom_type_definition(
@@ -81,7 +81,7 @@ AkaiKKR計算をODAT-SEの探索アルゴリズムに接続して、ハイエン
    akai_command = ["specx", "<", "{input}", ">", "{output}"]
    ```
    これは `specx < test.in > test.out` と同等です。`{output}` を省略した場合、標準出力はファイルに保存されません。
-2. 動作確認のみを行う場合は `mock_output = "refs/REBCO/test-1/test.out"` を残しておくと、`refs/REBCO/test-1/test.out:523` の `total energy= -59275.587686117` を読み取り、AkaiKKR を実行せずに一連の処理をトレースできます。実際の計算では、`total energy=` と `total energy`（`=`なし）の両方の形式に対応しています。
+2. 動作確認のみを行う場合は `mock_output = "refs/odatse-specx/test-1/test.out"` を残しておくと、`refs/odatse-specx/test-1/test.out:523` の `total energy= -59275.587686117` を読み取り、AkaiKKR を実行せずに一連の処理をトレースできます。実際の計算では、`total energy=` と `total energy`（`=`なし）の両方の形式に対応しています。
 3. 実計算時は `mock_output` 行を削除し、`output_file` に AkaiKKR が出力するファイル名 (例: `test.out`) を指定して `python optimize_composition.py hea_mapper.toml` を実行します。`target_label`（例: `Y_1h_2`）に対応するサイトへ新しい混合ラベルが適用され、得られた `total energy` が ODAT-SE の目的関数として最小化されます。
 4. HEA の各濃度を厳密に 1 へ正規化したい場合は `[hea] simplex_mode = true` を指定してください。この場合、ODAT-SE の `base.dimension` と `algorithm.param.*` は `len([[hea.species]]) - 1` の次元数に合わせます（例: 4 元合金なら 3 次元）。Stick-breaking パラメータ化によって常に非負・総和 1 の組成が生成されます。
 5. 最適化したい指標は `[hea.metric]` で選択できます。デフォルトは `total_energy` ですが、`name = "band_energy"` や `pattern = "sigma=..."` のようにカスタム正規表現を指定することで、伝導度など別の観測量にも拡張できます。また、抽出後の値に対して `transform` でメトリクス変換を適用できます（例: `log1p` や `abs`）。
@@ -178,7 +178,7 @@ num_list = [5, 5, 5]
 name = "function"
 
 [hea]
-template_input = "refs/REBCO/test-1/test.in"
+template_input = "refs/odatse-specx/test-1/test.in"
 target_label = "Y_1h_2"
 new_label = "Ln_HEA"
 simplex_mode = true  # ← これを有効にすると stick-breaking 変換を使用

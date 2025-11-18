@@ -197,7 +197,7 @@ from generate_input import (
 )
 
 # 入力ファイルを読み込む
-input_data = load_input_file("refs/REBCO/test-4/test.in")
+input_data = load_input_file("refs/odatse-specx/test-4/test.in")
 
 # 新しい原子種（Fe原子100%）を追加
 new_data = add_atom_type_definition(
@@ -231,7 +231,7 @@ from generate_input import (
 )
 
 # 入力ファイルを一度だけ読み込む
-input_data = load_input_file("refs/REBCO/test-4/test.in")
+input_data = load_input_file("refs/odatse-specx/test-4/test.in")
 
 # パターン1: Fe_newを追加してBa_2t_0を置き換え
 data1 = add_atom_type_definition(

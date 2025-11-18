@@ -1,0 +1,20 @@
+{
+    "folders": [
+        {
+            "name": "REBCO",
+            "path": "."
+        },
+        {
+            "name": "ODAT-SE",
+            "path": "/Users/k-yoshimi/Dropbox/PycharmProjects/ODAT-SE"
+        },
+        {
+            "name": "ODAT-SE Tutorial",
+            "path": "/Users/k-yoshimi/Dropbox/PycharmProjects/ODAT-SE/odat-se-gallery/data/tutorial"
+        }
+    ],
+    "settings": {
+        "python.defaultInterpreterPath": "python3"
+    }
+}
+

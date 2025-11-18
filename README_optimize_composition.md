@@ -231,7 +231,7 @@ EXAMPLES
     interval = 10
 
     [hea]
-    template_input = "refs/REBCO/test-1/test.in"
+    template_input = "refs/odatse-specx/test-1/test.in"
     target_label = "Y_1h_2"
     new_label = "Ln_HEA"
     work_dir = "runs/hea_trials"
@@ -279,7 +279,7 @@ EXAMPLES
 
 モック出力を使ってAkaiKKRを実行せずに動作確認する例:
 
-    python optimize_composition.py hea_mapper.toml --mock-output refs/REBCO/test-1/test.out
+    python optimize_composition.py hea_mapper.toml --mock-output refs/odatse-specx/test-1/test.out
 
 NOTES
 

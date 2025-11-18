@@ -120,7 +120,7 @@ python3 -m unittest test_generate_input.py -v
 
 テストは以下のファイルを前提としています：
 
-- `refs/REBCO/test-1/test.in`: テスト用の入力ファイル
+- `refs/odatse-specx/test-1/test.in`: テスト用の入力ファイル
 
 このファイルが存在しない場合、テストは失敗します。
 
@@ -163,7 +163,7 @@ OK
 ### テストが失敗する場合
 
 1. **ファイルが見つからないエラー**
-   - `refs/REBCO/test-4/test.in`が存在することを確認してください
+   - `refs/odatse-specx/test-4/test.in`が存在することを確認してください
 
 2. **インポートエラー**
    - `generate_input.py`が同じディレクトリにあることを確認してください
@@ -181,7 +181,7 @@ class TestNewFeature(unittest.TestCase):
 
     def setUp(self):
         """テストのセットアップ"""
-        self.test_input_file = "refs/REBCO/test-4/test.in"
+        self.test_input_file = "refs/odatse-specx/test-4/test.in"
         self.sample_input_data = load_input_file(self.test_input_file)
 
     def test_new_feature_basic(self):
