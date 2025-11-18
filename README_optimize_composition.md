@@ -4,7 +4,7 @@ NAME
     optimize_composition.py - AkaiKKRを用いたハイエントロピー合金組成最適化ツール
 
 SYNOPSIS
-    python optimize_composition.py <config_file>
+    python optimize_composition.py <config_file> [--mock-output PATH]
 
 DESCRIPTION
     `optimize_composition.py` は、ODAT-SEの探索アルゴリズムとAkaiKKR計算を結合し、
@@ -118,7 +118,9 @@ CONFIGURATION SECTIONS
 
     mock_output (string, optional)
         動作確認用のモック出力ファイルパス。指定すると、AkaiKKRを実行せずに
-        このファイルをコピーして使用します。実計算時はこの行を削除してください。
+        このファイルをコピーして使用します。実計算時は設定しないでください。
+        一時的な動作確認には、TOMLを汚さずにCLIの--mock-outputで上書きする
+        運用を推奨します。
 
     simplex_mode (boolean, optional, default: false)
         trueに設定すると、stick-breaking変換を使用して、常に総和が1.0になる
@@ -268,6 +270,10 @@ EXAMPLES
     env = { "OMP_NUM_THREADS" = "4", "MKL_NUM_THREADS" = "4" }
     timeout_sec = 3600
 
+モック出力を使ってAkaiKKRを実行せずに動作確認する例:
+
+    python optimize_composition.py hea_mapper.toml --mock-output refs/REBCO/test-1/test.out
+
 NOTES
 
 次元数の設定:
@@ -291,4 +297,3 @@ SEE ALSO
     README.md
     README_generate_input.md
     hea_mapper.toml
-

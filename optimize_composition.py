@@ -378,8 +378,14 @@ class HEAObjective:
         return np.asarray(fractions)
 
 
-def build_runner(config_path: Path) -> Tuple[odatse.Runner, odatse.Info]:
+def build_runner(
+    config_path: Path, mock_output_override: str | None = None
+) -> Tuple[odatse.Runner, odatse.Info]:
     raw_config = odatse.util.toml.load(str(config_path))
+    if mock_output_override is not None:
+        raw_config.setdefault("hea", {})
+        raw_config["hea"]["mock_output"] = mock_output_override
+
     info = odatse.Info(raw_config)
     objective = HEAObjective(raw_config.get("hea"), info)
 
@@ -397,10 +403,18 @@ def main() -> None:
         "config",
         help="Path to the ODAT-SE TOML configuration (e.g. hea_mapper.toml).",
     )
+    parser.add_argument(
+        "--mock-output",
+        metavar="PATH",
+        help=(
+            "Use a mock AkaiKKR output file instead of running AkaiKKR. "
+            "Overrides [hea].mock_output in the TOML."
+        ),
+    )
     args = parser.parse_args()
 
     config_path = Path(args.config).expanduser().absolute()
-    runner, info = build_runner(config_path)
+    runner, info = build_runner(config_path, mock_output_override=args.mock_output)
 
     alg_module = odatse.algorithm.choose_algorithm(info.algorithm.get("name", "mapper"))
     algorithm = alg_module.Algorithm(info, runner)

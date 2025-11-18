@@ -84,7 +84,7 @@ def _install_odatse_stub():
 
 _install_odatse_stub()
 
-from optimize_composition import HEAObjective
+from optimize_composition import HEAObjective, MetricExtractor
 
 
 class TestHEAObjectiveSimplexMode(unittest.TestCase):
@@ -257,6 +257,38 @@ class TestHEAObjectiveParseEnergy(unittest.TestCase):
 
             energy = objective.metric.extract(output_file)
             self.assertAlmostEqual(energy, -59275.587686117)
+        finally:
+            tmpdir.cleanup()
+
+    def test_parse_band_energy_case_insensitive(self):
+        tmpdir = tempfile.TemporaryDirectory()
+        try:
+            output_file = Path(tmpdir.name) / "test.out"
+            # Uppercase field name to verify ignore_case works
+            output_file.write_text("BAND ENERGY= 12.34\n")
+
+            metric = MetricExtractor({"name": "band_energy"})
+            value = metric.extract(output_file)
+            self.assertAlmostEqual(value, 12.34)
+        finally:
+            tmpdir.cleanup()
+
+    def test_custom_metric_group_and_scale(self):
+        tmpdir = tempfile.TemporaryDirectory()
+        try:
+            output_file = Path(tmpdir.name) / "test.out"
+            output_file.write_text("val=1 foo=42\n")
+
+            metric = MetricExtractor(
+                {
+                    "name": "custom",
+                    "pattern": r"val=(\d+)\s+foo=(\d+)",
+                    "group": 2,
+                    "scale": 0.1,
+                }
+            )
+            value = metric.extract(output_file)
+            self.assertAlmostEqual(value, 4.2)
         finally:
             tmpdir.cleanup()
 
