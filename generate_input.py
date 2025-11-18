@@ -580,10 +580,20 @@ def write_input_file(input_data: Dict, output_path: Union[str, Path]) -> None:
                 for anclr, conc in type_def["atoms"]:
                     f.write(f"                              {anclr}  {conc}\n")
 
-            f.write("c------------------------------------------------------------\n")
+        # natmセクション（原子数）
+        natm = len(input_data["atomic_positions"])
+        f.write("c------------------------------------------------------------\n")
+        f.write("c   natm\n")
+        f.write(f"    {natm}\n")
+        f.write("c------------------------------------------------------------\n")
 
         # 原子位置セクションのヘッダー
-        f.writelines(input_data["atomic_header"])
+        # atomic_headerから区切り線（c---で始まる行）を削除（重複を避ける）
+        header_lines = [
+            line for line in input_data["atomic_header"]
+            if not line.strip().startswith("c---")
+        ]
+        f.writelines(header_lines)
 
         # 原子位置
         for x, y, z, atmtyp in input_data["atomic_positions"]:

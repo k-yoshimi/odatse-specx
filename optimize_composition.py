@@ -110,6 +110,12 @@ class HEAObjective:
         self.work_dir.mkdir(parents=True, exist_ok=True)
         self.output_filename = config.get("output_file", "test.out")
         self.keep_intermediate = bool(config.get("keep_intermediate", False))
+        # akai_command examples:
+        #   ["specx", "<", "{input}"]           -> specx < test.in (stdin redirection)
+        #   ["specx", "{input}"]                -> specx test.in (command argument)
+        #   ["specx", "{input_path}"]           -> specx /full/path/to/test.in
+        #   ["/path/to/specx", "<", "test.in"]  -> /path/to/specx < test.in
+        # Placeholders: {input} = filename only, {input_path} = full path
         self.command_template = _as_command_list(config.get("akai_command", []))
         if not self.command_template:
             raise ValueError("akai_command must be provided inside [hea].")
@@ -273,12 +279,44 @@ class HEAObjective:
         )
 
     def _run_akai_kkr(self, input_path: Path, trial_dir: Path) -> None:
-        cmd = [
-            token.replace("{input}", input_path.name).replace(
+        """
+        Execute AkaiKKR command with input file handling.
+        
+        Supports stdin redirection (<) and placeholder substitution:
+        - {input} -> input_path.name (e.g., "test.in")
+        - {input_path} -> str(input_path) (e.g., "/full/path/to/test.in")
+        """
+        cmd = []
+        stdin_file = None
+        skip_next = False
+        
+        for i, token in enumerate(self.command_template):
+            if skip_next:
+                skip_next = False
+                continue
+            
+            # Replace placeholders: {input} = filename, {input_path} = full path
+            replaced = token.replace("{input}", input_path.name).replace(
                 "{input_path}", str(input_path)
             )
-            for token in self.command_template
-        ]
+            
+            if replaced == "<":
+                # Handle stdin redirection: < filename
+                # Next token should be the input file (may contain {input} or {input_path})
+                if i + 1 < len(self.command_template):
+                    next_token = self.command_template[i + 1].replace(
+                        "{input}", input_path.name
+                    ).replace("{input_path}", str(input_path))
+                    # Open file relative to trial_dir
+                    stdin_file = (trial_dir / next_token).open("r")
+                    skip_next = True
+                else:
+                    # If < is at the end, use input_path directly
+                    stdin_file = input_path.open("r")
+            else:
+                # Regular command argument
+                cmd.append(replaced)
+        
         try:
             subprocess.run(
                 cmd,
@@ -286,9 +324,13 @@ class HEAObjective:
                 check=True,
                 env=self.command_env,
                 timeout=self.command_timeout,
+                stdin=stdin_file,
             )
         except subprocess.CalledProcessError as exc:
             raise RuntimeError(f"AkaiKKR failed for {input_path}") from exc
+        finally:
+            if stdin_file is not None:
+                stdin_file.close()
 
     def _to_fractions(self, params: np.ndarray) -> np.ndarray:
         if self.simplex_mode:
