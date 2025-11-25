@@ -112,7 +112,27 @@ write_input_file(modified, "output/test_modified.in")
 
 A sample workflow for exploring high-entropy alloy (HEA) compositions by connecting AkaiKKR calculations to ODAT-SE's search algorithms has been added in `optimize_composition.py` / `hea_mapper.toml`.
 
-1. Edit `hea_mapper.toml` and list the atom species (atomic numbers) you want to mix in `[[hea.species]]`. In `akai_command`, specify the command sequence to launch AkaiKKR. Available placeholders:
+### Template Input File
+
+The `template_input` parameter in the `[hea]` section specifies the base AkaiKKR input file that serves as a template for generating trial calculations. This template file should be a valid AkaiKKR input file containing the crystal structure and calculation parameters you want to use. The tool will:
+
+1. Load the template file using `generate_input.py`'s `load_input_file()` function
+2. Identify atoms with the label specified in `target_label`
+3. Replace those atoms with a new mixed atom species (defined by `[[hea.species]]`) with the label specified in `new_label`
+4. Generate a new input file for each trial with the optimized composition
+
+**Important points about template files:**
+- The template file must be a valid AkaiKKR input file
+- The `target_label` must exist in the template file (at least one atom must have this label)
+- The template file path is relative to `root_dir` (or the current directory if not specified)
+- All other parts of the template (crystal structure, calculation parameters, etc.) are preserved in the generated files
+- Example template files are provided in the `examples/` directory (e.g., `examples/hea_total_energy/template.in`)
+
+### Configuration Steps
+
+1. **Prepare your template file**: Create or select an AkaiKKR input file that contains the structure and calculation settings you want to use. Ensure it has at least one atom with the label you plan to replace (specified in `target_label`).
+
+2. Edit `hea_mapper.toml` and list the atom species (atomic numbers) you want to mix in `[[hea.species]]`. In `akai_command`, specify the command sequence to launch AkaiKKR. Available placeholders:
    - `{input}`: Input filename (e.g., `"test.in"`)
    - `{input_path}`: Full path to the input file
    - `{output}`: Output filename (specified by `output_file` setting, default: `"test.out"`)
