@@ -147,6 +147,154 @@ The `template_input` parameter in the `[hea]` section specifies the base AkaiKKR
 4. To strictly normalize each HEA concentration to 1, specify `[hea] simplex_mode = true`. In this case, ODAT-SE's `base.dimension` and `algorithm.param.*` should match the dimension count of `len([[hea.species]]) - 1` (e.g., 3 dimensions for a 4-element alloy). The stick-breaking parameterization always generates compositions that are non-negative and sum to 1.
 5. The metric to optimize can be selected in `[hea.metric]`. The default is `total_energy`, but you can extend to other observables such as conductivity by specifying custom regular expressions like `name = "band_energy"` or `pattern = "sigma=..."`. You can also apply metric transformations to the extracted value using `transform` (e.g., `log1p` or `abs`).
 
+## Understanding Output Results
+
+After running `optimize_composition.py`, you will see various output files and logs. This section explains how to interpret them.
+
+### Console Output
+
+During execution, you will see trial-by-trial progress printed to the console:
+
+```
+[Trial 00001] fractions=[0.25, 0.33, 0.25, 0.17] -> total_energy=-59275.587686117
+[Trial 00002] fractions=[0.30, 0.28, 0.22, 0.20] -> total_energy=-59280.123456789
+...
+```
+
+**Format**: `[Trial {number:05d}] fractions={composition} -> {metric_name}={value}`
+
+- **Trial number**: Sequential trial identifier (5 digits, zero-padded)
+- **fractions**: The actual composition fractions for each species (sums to 1.0 in simplex_mode)
+- **metric_name**: The name of the metric being optimized (e.g., `total_energy`, `band_energy`)
+- **value**: The extracted metric value from AkaiKKR output
+
+**Note**: The log interval is controlled by `[runner.log] interval` in the TOML configuration (default: 10 trials).
+
+### ODAT-SE Output Directory
+
+ODAT-SE generates output files in the directory specified by `[base] output_dir` (default: `odatse/output`). The directory structure is:
+
+```
+odatse/output/
+└── {run_id}/
+    ├── runner.log      # Function evaluation log
+    └── time.log       # Timing information
+```
+
+#### runner.log
+
+This file contains a log of all function evaluations (trials). Each line represents one trial:
+
+```
+# $1: num_calls
+# $2: elapsed time from last call
+# $3: elapsed time from start
+
+1      0.009531 0.009531
+2      0.002942 0.012473
+3      0.005050 0.017524
+...
+```
+
+**Columns**:
+- **Column 1**: Trial number (num_calls)
+- **Column 2**: Time elapsed since the previous trial (seconds)
+- **Column 3**: Total elapsed time from the start (seconds)
+
+**Usage**: Use this file to:
+- Track the total number of trials completed
+- Monitor calculation speed and identify slow trials
+- Analyze optimization progress over time
+
+#### time.log
+
+This file contains detailed timing breakdown for the optimization run:
+
+```
+#in units of seconds
+#init
+ total = 0.0
+#prepare
+ total = 1.3329990906640887e-06
+#run
+ total = 0.06941450000158511
+ - submit = 0.06837016799545381
+ - file_CM = 0.00010874999861698598
+#post
+ total = 0.0003454160032561049
+```
+
+**Sections**:
+- **init**: Initialization time
+- **prepare**: Preparation time (setup, configuration loading)
+- **run**: Total execution time
+  - **submit**: Time spent in function evaluation (AkaiKKR calculations)
+  - **file_CM**: Time spent in file operations and colormap generation
+- **post**: Post-processing time
+
+**Usage**: Use this file to:
+- Identify performance bottlenecks
+- Optimize configuration for faster runs
+- Estimate total runtime for large-scale optimizations
+
+### Finding Optimal Compositions
+
+To find the composition with the minimum (or maximum) metric value:
+
+1. **From console output**: Look for the trial with the smallest metric value (for minimization) or largest value (for maximization).
+
+2. **From runner.log**: The trial number corresponds to the evaluation order. Match it with the console output to find the composition.
+
+3. **From intermediate files** (if `keep_intermediate = true`):
+   - Trial directories are preserved in `{work_dir}/trial_{number:05d}/`
+   - Each directory contains:
+     - `{template_input.name}`: The generated AkaiKKR input file with the specific composition
+     - `{output_file}`: The AkaiKKR output file from which the metric was extracted
+   - Example: `runs/hea_trials/trial_00042/test.in` and `runs/hea_trials/trial_00042/test.out`
+
+4. **Best practice**: Set `keep_intermediate = true` for important runs to preserve all trial data for detailed analysis.
+
+### Error Log
+
+If `error_log` is specified in the `[hea]` section, detailed error information is written to the specified file:
+
+```
+ERROR [Trial 00015] FileNotFoundError: /path/to/output/test.out was not created by AkaiKKR.
+  Input file: /path/to/runs/hea_trials/trial_00015/test.in
+  Output file: /path/to/runs/hea_trials/trial_00015/test.out
+  Trial directory: /path/to/runs/hea_trials/trial_00015
+  Composition parameters: [0.5, 0.3, 0.2]
+  Fractions: [0.25, 0.30, 0.25, 0.20]
+```
+
+**Information included**:
+- Error type and message
+- Trial number
+- Composition parameters and fractions
+- Paths to input file, output file, and trial directory
+
+**Usage**: Use this log to:
+- Identify problematic compositions
+- Debug calculation failures
+- Adjust error handling settings
+
+### Example: Analyzing Results
+
+After a run with `num_list = [5, 5, 5]` (125 trials), you might see:
+
+1. **Console output** shows trial 00042 has the minimum energy:
+   ```
+   [Trial 00042] fractions=[0.20, 0.30, 0.25, 0.25] -> total_energy=-59300.123456
+   ```
+
+2. **Check runner.log** to see trial 42 was evaluated at time 0.523 seconds.
+
+3. **If `keep_intermediate = true`**, examine:
+   - `runs/hea_trials/trial_00042/test.in`: The input file with optimal composition
+   - `runs/hea_trials/trial_00042/test.out`: The full AkaiKKR output for detailed analysis
+
+4. **Verify in error_log** that trial 42 completed successfully (no error entry).
+
 ## Appendix: simplex_mode Algorithm
 
 `simplex_mode` maps free variables passed from ODAT-SE to concentration vectors that are always non-negative and sum to 1 using a "stick-breaking" transformation (`optimize_composition.py:243-252`).
