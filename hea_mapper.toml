@@ -32,10 +32,12 @@ output_file = "test.out"
 #   {input_path} - full path to input file
 #   {output} - output filename (e.g., "test.out", from output_file setting)
 # Examples:
-#   ["specx", "<", "{input}", ">", "{output}"]  -> specx < test.in > test.out (recommended)
+#   ["specx", "<", "{input}", ">", "{output}"]  -> specx < test.in > test.out (if specx is in PATH)
+#   ["/usr/local/bin/specx", "<", "{input}", ">", "{output}"]  -> full path to specx executable
 #   ["specx", "<", "{input}"]                    -> specx < test.in
 #   ["specx", "{input}"]                         -> specx test.in
-akai_command = ["/home/k-yoshimi/program/cpa2021/specx", "<", "{input}", ">", "{output}"]
+# NOTE: Replace the path below with your actual specx executable path
+akai_command = ["/path/to/specx", "<", "{input}", ">", "{output}"]
 keep_intermediate = true  # Set to true for debugging
 #mock_output = "test/refs/test.out"  # remove this line when running real calculations
 simplex_mode = true  # enforce fractions that sum exactly to 1.0
