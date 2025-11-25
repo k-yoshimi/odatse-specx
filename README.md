@@ -440,6 +440,23 @@ For details, see [README_test.md](README_test.md).
 
 MIT License
 
+## Citation
+
+If you use this software in your research, we would appreciate it if you could cite the following papers:
+
+### 2DMAT
+
+This project uses [2DMAT](https://github.com/issp-center-dev/2DMAT) for optimization algorithms. If you use this software, we would appreciate it if you could cite 2DMAT in your publications.
+
+- **2DMAT**: Y. Motoyama, K. Yoshimi, I. Mochizuki, H. Iwamoto, H. Ichinose, T. Hoshi, "Data-analysis software framework 2DMAT and its application to experimental measurements for two-dimensional material structures", *Computer Physics Communications*, **280**, 108465 (2022). [DOI](https://www.sciencedirect.com/science/article/pii/S0010465522001849?via%3Dihub)
+
+### PASUMS
+
+2DMAT and ODAT-SE were created as part of the Project for Advancement of Software Usability in Materials Science (PASUMS) at The Institute for Solid State Physics (ISSP), The University of Tokyo. For the theoretical background and methodology used in this work, we would appreciate it if you could cite:
+
+- **PASUMS**: K. Yoshimi, Y. Motoyama, T. Aoyama, M. Kawamura, N. Kawashima, "Project for advancement of software usability in materials science", Published online: 28 Oct 2025. [DOI: 10.1080/27660400.2025.2564055](https://www.tandfonline.com/doi/full/10.1080/27660400.2025.2564055)
+
 ## References
 
 - [AkaiKKR Official Documentation](https://academeia.github.io/AkaiKKR_Documents/input)
+- [2DMAT](https://github.com/issp-center-dev/2DMAT) - Optimization framework used in this project
