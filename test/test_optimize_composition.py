@@ -194,6 +194,53 @@ class TestHEAObjectiveSimplexMode(unittest.TestCase):
         self.assertLess(fractions[2], 0.01)
         self.assertLess(fractions[3], 0.01)
 
+    def test_simplex_mode_boundary_values_zero_and_one(self):
+        """
+        Test that boundary values 0.0 and 1.0 are correctly included.
+
+        When min_list=[0.0, 0.0] and max_list=[1.0, 1.0] with num_list=[5, 5],
+        the grid should include 0.0 and 1.0 as boundary values, and these
+        should be preserved through the stick-breaking transformation.
+        """
+        objective = self._instantiate_objective()
+
+        # Test with input value 0.0 (lower boundary)
+        params_zero = np.array([0.0, 0.0, 0.0], dtype=float)
+        fractions_zero = objective._to_fractions(params_zero)
+
+        self.assertEqual(len(fractions_zero), 4)
+        self.assertAlmostEqual(fractions_zero.sum(), 1.0, places=10)
+        # When first param is 0.0, first fraction should be 0.0
+        self.assertAlmostEqual(fractions_zero[0], 0.0, places=10)
+        # Last fraction should be 1.0 (all remainder)
+        self.assertAlmostEqual(fractions_zero[-1], 1.0, places=10)
+
+        # Test with input value 1.0 (upper boundary)
+        params_one = np.array([1.0, 0.0, 0.0], dtype=float)
+        fractions_one = objective._to_fractions(params_one)
+
+        self.assertEqual(len(fractions_one), 4)
+        self.assertAlmostEqual(fractions_one.sum(), 1.0, places=10)
+        # When first param is 1.0, first fraction should be 1.0
+        self.assertAlmostEqual(fractions_one[0], 1.0, places=10)
+        # Remaining fractions should be 0.0
+        self.assertAlmostEqual(fractions_one[1], 0.0, places=10)
+        self.assertAlmostEqual(fractions_one[2], 0.0, places=10)
+        self.assertAlmostEqual(fractions_one[3], 0.0, places=10)
+
+        # Test with all params being 1.0 (upper boundary for all)
+        params_all_one = np.array([1.0, 1.0, 1.0], dtype=float)
+        fractions_all_one = objective._to_fractions(params_all_one)
+
+        self.assertEqual(len(fractions_all_one), 4)
+        self.assertAlmostEqual(fractions_all_one.sum(), 1.0, places=10)
+        # First fraction should be 1.0 (all remainder consumed)
+        self.assertAlmostEqual(fractions_all_one[0], 1.0, places=10)
+        # Remaining fractions should be 0.0
+        self.assertAlmostEqual(fractions_all_one[1], 0.0, places=10)
+        self.assertAlmostEqual(fractions_all_one[2], 0.0, places=10)
+        self.assertAlmostEqual(fractions_all_one[3], 0.0, places=10)
+
 
 class TestHEAObjectiveParseEnergy(unittest.TestCase):
     def test_parse_total_energy(self):
