@@ -6,7 +6,7 @@ Provides functionality to generate new input files by changing particle types
 """
 
 from pathlib import Path
-from typing import Dict, List, Tuple, Union, Optional
+from typing import Dict, List, Optional, Tuple, Union, Optional
 
 
 def parse_atomic_positions(
@@ -511,6 +511,129 @@ def add_atom_type_definition(
     new_data["atom_type_definitions"].append(new_type_def)
 
     return new_data
+
+
+def modify_atom_type_definition(
+    input_data: Dict,
+    type_name: str,
+    atoms: Optional[List[Tuple[int, float]]] = None,
+    ncmp: Optional[int] = None,
+    rmt: Optional[float] = None,
+    field: Optional[float] = None,
+    mxl: Optional[int] = None,
+) -> Dict:
+    """
+    Modify an existing atom type definition.
+
+    Parameters
+    ----------
+    input_data : Dict
+        Structured data loaded by load_input_file().
+    type_name : str
+        Name of the atom type to modify.
+    atoms : Optional[List[Tuple[int, float]]]
+        New list of (atomic number, concentration). If None, keep original.
+    ncmp : Optional[int]
+        New number of atom species. If None, infer from atoms or keep original.
+    rmt : Optional[float]
+        New muffin-tin radius. If None, keep original.
+    field : Optional[float]
+        New external magnetic field. If None, keep original.
+    mxl : Optional[int]
+        New maximum angular momentum. If None, keep original.
+
+    Returns
+    -------
+    Dict
+        Structured data with modified atom type definition (new copy).
+
+    Raises
+    ------
+    ValueError
+        If the specified type_name is not found.
+
+    Examples
+    --------
+    >>> input_data = load_input_file('test.in')
+    >>> # Add vacancy to O2_1e_6 site (93% O + 7% vacancy)
+    >>> modified = modify_atom_type_definition(
+    ...     input_data,
+    ...     type_name='O2_1e_6',
+    ...     atoms=[(8, 93.0), (0, 7.0)]  # O 93%, vacancy 7%
+    ... )
+    """
+    # Create new copy with deep copy of atom_type_definitions
+    new_data = {
+        "header": input_data["header"][:],
+        "ntyp": input_data.get("ntyp", 0),
+        "atom_type_definitions": [],
+        "atomic_header": input_data["atomic_header"][:],
+        "atomic_positions": input_data["atomic_positions"][:],
+        "footer": input_data["footer"][:],
+    }
+
+    found = False
+    for defn in input_data.get("atom_type_definitions", []):
+        new_defn = {
+            "type": defn["type"],
+            "ncmp": defn["ncmp"],
+            "rmt": defn["rmt"],
+            "field": defn["field"],
+            "mxl": defn["mxl"],
+            "atoms": list(defn["atoms"]),
+        }
+
+        if defn["type"] == type_name:
+            found = True
+            if atoms is not None:
+                new_defn["atoms"] = list(atoms)
+                # Update ncmp if atoms are provided and ncmp is not specified
+                if ncmp is None:
+                    new_defn["ncmp"] = len(atoms)
+            if ncmp is not None:
+                new_defn["ncmp"] = ncmp
+            if rmt is not None:
+                new_defn["rmt"] = rmt
+            if field is not None:
+                new_defn["field"] = field
+            if mxl is not None:
+                new_defn["mxl"] = mxl
+
+        new_data["atom_type_definitions"].append(new_defn)
+
+    if not found:
+        raise ValueError(f"Atom type '{type_name}' not found in input data.")
+
+    return new_data
+
+
+def count_atoms_by_type(input_data: Dict, type_name: str) -> int:
+    """
+    Count the number of atoms with the specified type in atomic positions.
+
+    Parameters
+    ----------
+    input_data : Dict
+        Structured data loaded by load_input_file().
+    type_name : str
+        Name of the atom type to count.
+
+    Returns
+    -------
+    int
+        Number of atoms with the specified type.
+
+    Examples
+    --------
+    >>> input_data = load_input_file('test.in')
+    >>> count = count_atoms_by_type(input_data, 'O2_1e_6')
+    >>> print(f"Found {count} O2_1e_6 atoms")
+    """
+    count = 0
+    for _, _, _, atmtyp in input_data["atomic_positions"]:
+        if atmtyp == type_name:
+            count += 1
+    return count
 
 
 def write_input_file(input_data: Dict, output_path: Union[str, Path]) -> None:
