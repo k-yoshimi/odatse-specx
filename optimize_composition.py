@@ -388,7 +388,7 @@ class HEAObjective:
         return clipped / total
 
     def _stick_breaking(self, params: np.ndarray) -> np.ndarray:
-        values = np.clip(np.asarray(params, dtype=float), 1e-6, 1 - 1e-6)
+        values = np.clip(np.asarray(params, dtype=float), 0.0, 1.0)
         remainder = 1.0
         fractions: List[float] = []
         for stick in values:
