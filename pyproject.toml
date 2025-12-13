@@ -29,6 +29,7 @@ classifiers = [
 dependencies = [
     "numpy>=1.20.0",
     "odat-se",
+    "odatse-kkr>=0.1.0",
 ]
 
 [project.optional-dependencies]
@@ -51,4 +52,3 @@ python_files = ["test_*.py"]
 python_classes = ["Test*"]
 python_functions = ["test_*"]
 addopts = "-v --tb=short"
-

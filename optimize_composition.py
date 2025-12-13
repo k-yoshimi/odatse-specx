@@ -24,11 +24,9 @@ import argparse
 import math
 import os
 import re
-import shlex
 import shutil
-import subprocess
 from pathlib import Path
-from typing import Any, Dict, List, Sequence, Tuple
+from typing import Any, Dict, List, Tuple
 
 import numpy as np
 import odatse
@@ -36,82 +34,25 @@ import odatse.algorithm
 import odatse.solver.function
 import odatse.util.toml
 
+from odatse_kkr import (
+    MetricExtractor,
+    TrialDirectoryManager,
+    apply_tmp_env,
+    as_command_list,
+    ensure_tmp_subdir,
+    get_mpi_rank,
+    prepare_rank_work_dir,
+    rank_aware_path,
+    resolve_root_dir,
+    run_command_template,
+)
+
 from generate_input import (
     add_atom_type_definition,
     load_input_file,
     replace_atom_types_by_label,
     write_input_file,
 )
-
-DEFAULT_METRIC_PATTERNS = {
-    "total_energy": r"total energy=?\s+([-\d.+Ee]+)",
-    "band_energy": r"band energy=?\s+([-\d.+Ee]+)",
-}
-
-
-def _as_command_list(command: Any) -> List[str]:
-    """Convert a TOML value into a command list."""
-    if isinstance(command, str):
-        return shlex.split(command)
-    if isinstance(command, Sequence):
-        return [str(token) for token in command]
-    raise ValueError("akai_command must be a list or a string")
-
-
-class MetricExtractor:
-    """Utility to parse scalar metrics from AkaiKKR output."""
-
-    _TRANSFORMS = {
-        "identity": lambda x: x,
-        "abs": lambda x: abs(x),
-        "log": lambda x: math.log(x),
-        "log1p": lambda x: math.log1p(x),
-        "sqrt": lambda x: math.sqrt(x),
-        "square": lambda x: x * x,
-    }
-
-    def __init__(self, metric_cfg: Dict[str, Any]):
-        name = metric_cfg.get("name", "total_energy")
-        pattern = metric_cfg.get("pattern") or DEFAULT_METRIC_PATTERNS.get(name)
-        if not pattern:
-            raise ValueError(
-                f"Unsupported metric '{name}'. Provide a custom regex via metric.pattern."
-            )
-
-        ignore_case = metric_cfg.get("ignore_case", True)
-        flags = re.IGNORECASE if ignore_case else 0
-        self.pattern = re.compile(pattern, flags)
-        self.group = int(metric_cfg.get("group", 1))
-        self.scale = float(metric_cfg.get("scale", 1.0))
-        self.name = name
-
-        transform_name = metric_cfg.get("transform", "identity")
-        transform = self._TRANSFORMS.get(transform_name)
-        if transform is None:
-            supported = ", ".join(sorted(self._TRANSFORMS))
-            raise ValueError(
-                f"Unsupported metric.transform '{transform_name}'. "
-                f"Choose from: {supported}"
-            )
-        self.transform = transform
-
-    def extract(self, output_path: Path) -> float:
-        if not output_path.exists():
-            raise FileNotFoundError(f"{output_path} was not created by AkaiKKR.")
-
-        with output_path.open("r", encoding="utf-8", errors="ignore") as fp:
-            for line in fp:
-                match = self.pattern.search(line)
-                if match:
-                    value = float(match.group(self.group))
-                    scaled = value * self.scale
-                    return self.transform(scaled)
-
-        raise RuntimeError(
-            f"Metric '{self.name}' not found in {output_path}. "
-            "Adjust [hea.metric] settings if the output format differs."
-        )
-
 
 class HEAObjective:
     """
@@ -123,12 +64,17 @@ class HEAObjective:
             raise ValueError("Missing [hea] section in the TOML config.")
 
         self.info = info
-        self.root_dir = Path(info.base.get("root_dir", ".")).expanduser().absolute()
+        self.root_dir = resolve_root_dir(info)
         self.template_input = self.root_dir / config["template_input"]
         self.target_label = config["target_label"]
         self.new_label = config.get("new_label", f"{self.target_label}_mix")
-        self.work_dir = (self.root_dir / config.get("work_dir", "runs")).absolute()
-        self.work_dir.mkdir(parents=True, exist_ok=True)
+        self.mpirank = get_mpi_rank(info)
+        self.work_dir = prepare_rank_work_dir(
+            self.root_dir,
+            work_dir=config.get("work_dir", "runs"),
+            mpi_rank=self.mpirank,
+        )
+        self.trial_manager = TrialDirectoryManager(self.work_dir)
         self.output_filename = config.get("output_file", "test.out")
         self.keep_intermediate = bool(config.get("keep_intermediate", False))
         # akai_command examples:
@@ -140,12 +86,15 @@ class HEAObjective:
         #   {input} = filename only (e.g., "test.in")
         #   {input_path} = full path (e.g., "/full/path/to/test.in")
         #   {output} = output filename (e.g., "test.out")
-        self.command_template = _as_command_list(config.get("akai_command", []))
+        command_value = config.get("akai_command", [])
+        self.command_template = as_command_list(command_value)
         if not self.command_template:
             raise ValueError("akai_command must be provided inside [hea].")
         self.command_timeout = config.get("timeout_sec")
-        self.command_env = os.environ.copy()
-        self.command_env.update(config.get("env", {}))
+        base_env = os.environ.copy()
+        base_env.update(config.get("env", {}))
+        rank_tmpdir = ensure_tmp_subdir(self.work_dir, name="tmp", mpi_rank=self.mpirank)
+        self.command_env = apply_tmp_env(rank_tmpdir, base_env=base_env)
         self.mock_output = config.get("mock_output")
         if self.mock_output:
             self.mock_output = (self.root_dir / self.mock_output).absolute()
@@ -156,8 +105,11 @@ class HEAObjective:
         self.error_penalty = float(config.get("error_penalty", 1.0e10))
         self.error_log_file = config.get("error_log")
         if self.error_log_file:
-            self.error_log_file = (self.root_dir / self.error_log_file).absolute()
-            self.error_log_file.parent.mkdir(parents=True, exist_ok=True)
+            self.error_log_file = rank_aware_path(
+                self.root_dir,
+                self.error_log_file,
+                mpi_rank=self.mpirank,
+            )
 
         self.base_input_data = load_input_file(self.template_input)
         self.reference_type = self._get_reference_type()
@@ -273,9 +225,7 @@ class HEAObjective:
 
     def _prepare_trial_dir(self) -> Path:
         self.trial_counter += 1
-        trial_dir = self.work_dir / f"trial_{self.trial_counter:05d}"
-        trial_dir.mkdir(parents=True, exist_ok=True)
-        return trial_dir
+        return self.trial_manager.next()
 
     def _get_reference_type(self) -> Dict[str, Any]:
         for entry in self.base_input_data.get("atom_type_definitions", []):
@@ -303,76 +253,24 @@ class HEAObjective:
         )
 
     def _run_akai_kkr(self, input_path: Path, trial_dir: Path) -> None:
-        """
-        Execute AkaiKKR command with input file handling.
-        
-        Supports stdin/stdout redirection (<, >) and placeholder substitution:
-        - {input} -> input_path.name (e.g., "test.in")
-        - {input_path} -> str(input_path) (e.g., "/full/path/to/test.in")
-        - {output} -> output_filename (e.g., "test.out")
-        """
-        cmd = []
-        stdin_file = None
-        stdout_file = None
-        skip_next = False
-        
-        for i, token in enumerate(self.command_template):
-            if skip_next:
-                skip_next = False
-                continue
-            
-            # Replace placeholders: {input} = filename, {input_path} = full path, {output} = output filename
-            replaced = token.replace("{input}", input_path.name).replace(
-                "{input_path}", str(input_path)
-            ).replace("{output}", self.output_filename)
-            
-            if replaced == "<":
-                # Handle stdin redirection: < filename
-                # Next token should be the input file (may contain {input} or {input_path})
-                if i + 1 < len(self.command_template):
-                    next_token = self.command_template[i + 1].replace(
-                        "{input}", input_path.name
-                    ).replace("{input_path}", str(input_path))
-                    # Open file relative to trial_dir
-                    stdin_file = (trial_dir / next_token).open("r")
-                    skip_next = True
-                else:
-                    # If < is at the end, use input_path directly
-                    stdin_file = input_path.open("r")
-            elif replaced == ">":
-                # Handle stdout redirection: > filename
-                # Next token should be the output file (may contain {output})
-                if i + 1 < len(self.command_template):
-                    next_token = self.command_template[i + 1].replace(
-                        "{output}", self.output_filename
-                    )
-                    # Open file relative to trial_dir for writing
-                    stdout_file = (trial_dir / next_token).open("w")
-                    skip_next = True
-                else:
-                    # If > is at the end, use output_filename
-                    stdout_file = (trial_dir / self.output_filename).open("w")
-            else:
-                # Regular command argument
-                cmd.append(replaced)
-        
-        try:
-            subprocess.run(
-                cmd,
-                cwd=trial_dir,
-                check=True,
-                env=self.command_env,
-                timeout=self.command_timeout,
-                stdin=stdin_file,
-                stdout=stdout_file,
-            )
-        except subprocess.CalledProcessError as exc:
-            raise RuntimeError(f"AkaiKKR failed for {input_path}") from exc
-        finally:
-            if stdin_file is not None:
-                stdin_file.close()
-            if stdout_file is not None:
-                stdout_file.close()
+        """Execute AkaiKKR command using shared odatse-kkr helpers."""
+        output_path = trial_dir / self.output_filename
+        trial_tmpdir = ensure_tmp_subdir(
+            trial_dir,
+            name="tmp",
+            mpi_rank=self.mpirank,
+        )
+        trial_env = apply_tmp_env(trial_tmpdir, base_env=self.command_env)
+        trial_env["PWD"] = str(trial_dir)
+
+        run_command_template(
+            self.command_template,
+            work_dir=trial_dir,
+            input_path=input_path,
+            output_path=output_path,
+            env=trial_env,
+            timeout=self.command_timeout,
+        )
 
     def _to_fractions(self, params: np.ndarray) -> np.ndarray:
         if self.simplex_mode:

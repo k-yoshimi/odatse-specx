@@ -21,6 +21,11 @@ This project provides tools to read AkaiKKR (first-principles calculation code) 
 - **New atom species definition**: Define and add single or mixed atom species
 - **Input file export**: Write structured data in AkaiKKR input file format
 
+> **Note**: The core `generate_input` helpers now live in the shared
+> [`odatse-kkr`](https://github.com/k-yoshimi/odatse-kkr) package. This
+> repository re-exports them for backwards compatibility while continuing to
+> provide the CLI and documentation.
+
 ## Installation
 
 ### Requirements
@@ -28,6 +33,7 @@ This project provides tools to read AkaiKKR (first-principles calculation code) 
 - Python 3.10 or higher
 - numpy>=1.20.0
 - odat-se
+- odatse-kkr (shared MPI/workdir helpers used by the HEA optimizer)
 
 ### Install from source
 
@@ -36,6 +42,15 @@ Clone the repository and install in development mode:
 ```bash
 git clone <repository-url>
 cd odatse-specx
+pip install -e .
+```
+
+If you plan to run the ODAT-SE optimizer entrypoints, install the shared helper
+package beforehand:
+
+```bash
+git clone https://github.com/k-yoshimi/odatse-kkr.git
+cd odatse-kkr
 pip install -e .
 ```
 
