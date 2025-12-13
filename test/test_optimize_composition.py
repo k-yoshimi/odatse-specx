@@ -630,8 +630,9 @@ class TestHEAObjectiveErrorHandling(unittest.TestCase):
         self.assertEqual(result, 999.0)
 
         # Check that trial directory still exists
+        # Note: prepare_rank_work_dir creates runs/0/trial_* structure
         work_dir = self.root / "runs"
-        trial_dirs = list(work_dir.glob("trial_*"))
+        trial_dirs = list(work_dir.glob("*/trial_*"))
         self.assertGreater(len(trial_dirs), 0)
         # At least one trial directory should exist
         self.assertTrue(any(trial_dir.exists() for trial_dir in trial_dirs))
@@ -652,9 +653,10 @@ class TestHEAObjectiveErrorHandling(unittest.TestCase):
         self.assertEqual(result, 111.0)
 
         # Check that trial directories are removed
+        # Note: prepare_rank_work_dir creates runs/0/trial_* structure
         work_dir = self.root / "runs"
         if work_dir.exists():
-            trial_dirs = list(work_dir.glob("trial_*"))
+            trial_dirs = list(work_dir.glob("*/trial_*"))
             # All trial directories should be removed
             self.assertEqual(len([d for d in trial_dirs if d.exists()]), 0)
 
