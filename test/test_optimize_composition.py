@@ -11,6 +11,229 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 import numpy as np
 
+# Create mock odatse_kkr module if it doesn't exist
+try:
+    import odatse_kkr
+except ImportError:
+    odatse_kkr = types.ModuleType("odatse_kkr")
+    sys.modules["odatse_kkr"] = odatse_kkr
+
+# Add missing functions that are imported by optimize_composition
+def as_command_list(command):
+    """Convert a command string or list to a command list."""
+    if isinstance(command, str):
+        import shlex
+        return shlex.split(command)
+    if isinstance(command, (list, tuple)):
+        return [str(token) for token in command]
+    raise ValueError("command must be a string or list")
+
+def get_mpi_rank(info=None):
+    """Get MPI rank (mock returns 0)."""
+    return 0
+
+def prepare_rank_work_dir(work_dir_base, work_dir=None, rank=None, mpi_rank=None, rank_dir_pattern=None, **kwargs):
+    """Prepare rank-specific work directory."""
+    if work_dir is not None:
+        # If work_dir is provided, use it as base
+        work_dir_base = work_dir_base / work_dir
+    if mpi_rank is not None:
+        rank = mpi_rank
+    elif rank is None:
+        rank = get_mpi_rank()
+    if rank_dir_pattern:
+        rank_dir = work_dir_base / rank_dir_pattern.format(rank=rank)
+    else:
+        rank_dir = work_dir_base / str(rank)
+    rank_dir.mkdir(parents=True, exist_ok=True)
+    return rank_dir
+
+
+def ensure_tmp_subdir(base_dir, name="tmp", mpi_rank=None):
+    """Ensure tmp subdirectory exists."""
+    if mpi_rank is not None:
+        tmp_dir = base_dir / str(mpi_rank) / name
+    else:
+        tmp_dir = base_dir / name
+    tmp_dir.mkdir(parents=True, exist_ok=True)
+    return tmp_dir
+
+def apply_tmp_env(tmp_dir, base_env=None):
+    """Apply tmp directory to environment variables."""
+    if base_env is None:
+        import os
+        env = os.environ.copy()
+    else:
+        env = base_env.copy()
+    env["TMPDIR"] = str(tmp_dir)
+    env["TMP"] = str(tmp_dir)
+    return env
+
+class TrialDirectoryManager:
+    """Mock trial directory manager."""
+    def __init__(self, work_dir):
+        self.work_dir = work_dir
+        self.counter = 0
+    
+    def get_trial_dir(self):
+        """Get next trial directory."""
+        self.counter += 1
+        trial_dir = self.work_dir / f"trial_{self.counter:05d}"
+        trial_dir.mkdir(parents=True, exist_ok=True)
+        return trial_dir
+    
+    def next(self):
+        """Get next trial directory (alias for get_trial_dir)."""
+        return self.get_trial_dir()
+
+# MetricExtractor class (from original optimize_composition.py)
+class MetricExtractor:
+    """Utility to parse scalar metrics from AkaiKKR output."""
+    _TRANSFORMS = {
+        "identity": lambda x: x,
+        "abs": lambda x: abs(x),
+        "log": lambda x: math.log(x),
+        "log1p": lambda x: math.log1p(x),
+        "sqrt": lambda x: math.sqrt(x),
+        "square": lambda x: x * x,
+    }
+
+    def __init__(self, metric_cfg):
+        import re
+        name = metric_cfg.get("name", "total_energy")
+        pattern = metric_cfg.get("pattern")
+        if not pattern:
+            DEFAULT_PATTERNS = {
+                "total_energy": r"total energy=?\s+([-\d.+Ee]+)",
+                "band_energy": r"band energy=?\s+([-\d.+Ee]+)",
+            }
+            pattern = DEFAULT_PATTERNS.get(name)
+        if not pattern:
+            raise ValueError(
+                f"Unsupported metric '{name}'. Provide a custom regex via metric.pattern."
+            )
+
+        ignore_case = metric_cfg.get("ignore_case", True)
+        flags = re.IGNORECASE if ignore_case else 0
+        self.pattern = re.compile(pattern, flags)
+        self.group = int(metric_cfg.get("group", 1))
+        self.scale = float(metric_cfg.get("scale", 1.0))
+        self.name = name
+
+        transform_name = metric_cfg.get("transform", "identity")
+        transform = self._TRANSFORMS.get(transform_name)
+        if transform is None:
+            supported = ", ".join(sorted(self._TRANSFORMS))
+            raise ValueError(
+                f"Unsupported metric.transform '{transform_name}'. "
+                f"Choose from: {supported}"
+            )
+        self.transform = transform
+
+    def extract(self, output_path):
+        if not output_path.exists():
+            raise FileNotFoundError(f"{output_path} was not created by AkaiKKR.")
+
+        with output_path.open("r", encoding="utf-8", errors="ignore") as fp:
+            for line in fp:
+                match = self.pattern.search(line)
+                if match:
+                    value = float(match.group(self.group))
+                    scaled = value * self.scale
+                    return self.transform(scaled)
+
+        raise RuntimeError(
+            f"Metric '{self.name}' not found in {output_path}. "
+            "Adjust [hea.metric] settings if the output format differs."
+        )
+
+def rank_aware_path(base_path, path_str=None, mpi_rank=None):
+    """Create rank-aware path."""
+    if mpi_rank is None:
+        mpi_rank = get_mpi_rank()
+    if path_str:
+        return base_path / str(mpi_rank) / path_str
+    return base_path / str(mpi_rank)
+
+def resolve_root_dir(info_or_str, config_dir=None):
+    """Resolve root directory path."""
+    # Handle both info object and string
+    if hasattr(info_or_str, 'base'):
+        # It's an info object
+        root_dir_str = info_or_str.base.get("root_dir", ".")
+    else:
+        # It's a string
+        root_dir_str = info_or_str
+    root_dir_path = Path(root_dir_str).expanduser()
+    if not root_dir_path.is_absolute() and config_dir is not None:
+        return (config_dir / root_dir_path).resolve()
+    return root_dir_path.absolute()
+
+def run_command_template(command_template, input_path, output_path, trial_dir, env, timeout):
+    """Run command with template substitution."""
+    import subprocess
+    cmd = []
+    stdin_file = None
+    stdout_file = None
+    skip_next = False
+    
+    for i, token in enumerate(command_template):
+        if skip_next:
+            skip_next = False
+            continue
+        
+        replaced = token.replace("{input}", input_path.name).replace(
+            "{input_path}", str(input_path)
+        ).replace("{output}", output_path.name)
+        
+        if replaced == "<":
+            if i + 1 < len(command_template):
+                next_token = command_template[i + 1].replace(
+                    "{input}", input_path.name
+                ).replace("{input_path}", str(input_path))
+                stdin_file = (trial_dir / next_token).open("r")
+                skip_next = True
+            else:
+                stdin_file = input_path.open("r")
+        elif replaced == ">":
+            if i + 1 < len(command_template):
+                next_token = command_template[i + 1].replace(
+                    "{output}", output_path.name
+                )
+                stdout_file = (trial_dir / next_token).open("w")
+                skip_next = True
+            else:
+                stdout_file = output_path.open("w")
+        else:
+            cmd.append(replaced)
+    
+    try:
+        subprocess.run(
+            cmd,
+            cwd=trial_dir,
+            check=True,
+            env=env,
+            timeout=timeout,
+            stdin=stdin_file,
+            stdout=stdout_file,
+        )
+    finally:
+        if stdin_file is not None:
+            stdin_file.close()
+        if stdout_file is not None:
+            stdout_file.close()
+
+odatse_kkr.as_command_list = as_command_list
+odatse_kkr.get_mpi_rank = get_mpi_rank
+odatse_kkr.prepare_rank_work_dir = prepare_rank_work_dir
+odatse_kkr.apply_tmp_env = apply_tmp_env
+odatse_kkr.ensure_tmp_subdir = ensure_tmp_subdir
+odatse_kkr.TrialDirectoryManager = TrialDirectoryManager
+odatse_kkr.MetricExtractor = MetricExtractor
+odatse_kkr.rank_aware_path = rank_aware_path
+odatse_kkr.resolve_root_dir = resolve_root_dir
+odatse_kkr.run_command_template = run_command_template
+
 
 def _install_odatse_stub():
     """Install a lightweight odatse stub so that optimize_composition can be imported during tests."""
@@ -28,6 +251,8 @@ def _install_odatse_stub():
             }
             self.algorithm = algorithm
             self.solver = solver
+            # Store full config for apply_kkr_parameters_from_config and RetryConfig
+            self.inp = data
 
     class DummyRunner:
         def __init__(self, solver, info):
